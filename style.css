@@ -425,6 +425,129 @@ button:hover {
     font-size: 1rem;
     padding: 0.5rem 1.2rem;
   }
+
+  .champs-pronostic {
+    gap: 0.3rem 0.5rem;
+  }
+
+  .champs-pronostic label {
+    font-size: 0.75rem;
+  }
+
+  .champs-pronostic input {
+    width: 7rem;
+    font-size: 0.85rem;
+    padding: 0.2rem 0.4rem;
+  }
+}
+
+/* ---------- Pronostics (date de naissance, poids, taille) ---------- */
+
+.champs-pronostic {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.6rem 1rem;
+}
+
+.champs-pronostic label {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+  font-size: 0.9rem;
+}
+
+.champs-pronostic input {
+  width: 9.5rem;
+  font-size: 1rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: 8px;
+  border: 2px solid var(--accent-2);
+  background: var(--carte);
+  color: var(--texte);
+  color-scheme: dark;
+}
+
+.champs-pronostic input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* ---------- Plein écran ---------- */
+
+.hud .bouton-plein-ecran {
+  font-size: 0.85rem;
+  padding: 0.15rem 0.8rem;
+}
+
+/* Vrai plein écran (:fullscreen) ou plein écran simulé sur iPhone (.plein-ecran) */
+#jeu:fullscreen,
+#jeu.plein-ecran {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  padding: 0.3rem;
+  background: var(--fond);
+}
+
+#jeu:fullscreen h2,
+#jeu.plein-ecran h2 {
+  display: none;
+}
+
+#jeu:fullscreen .hud,
+#jeu.plein-ecran .hud {
+  margin: 0;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.8rem;
+  width: 100%;
+}
+
+/* Le jeu prend toute la place disponible en gardant ses proportions 16:9 */
+#jeu:fullscreen .zone-jeu,
+#jeu.plein-ecran .zone-jeu {
+  width: min(100%, calc((100dvh - 2.6rem) * 16 / 9));
+  max-width: none;
+}
+
+/* Les boutons tactiles passent par-dessus le jeu, semi-transparents */
+#jeu:fullscreen .controles-tactiles,
+#jeu.plein-ecran .controles-tactiles {
+  position: fixed;
+  left: 0.6rem;
+  right: 0.6rem;
+  bottom: 0.6rem;
+  justify-content: flex-start;
+  margin: 0;
+  max-width: none;
+  pointer-events: none;
+}
+
+#jeu:fullscreen .controles-tactiles button,
+#jeu.plein-ecran .controles-tactiles button {
+  flex: 0 0 auto;
+  width: 4.5rem;
+  height: 4.5rem;
+  padding: 0;
+  border-radius: 50%;
+  opacity: 0.55;
+  pointer-events: auto;
+}
+
+#jeu:fullscreen .controles-tactiles button:last-child,
+#jeu.plein-ecran .controles-tactiles button:last-child {
+  margin-left: auto;
+}
+
+body.jeu-plein-ecran {
+  overflow: hidden;
 }
 
 #regles ul {

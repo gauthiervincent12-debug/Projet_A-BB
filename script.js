@@ -24,6 +24,13 @@ const questionTexte = document.getElementById("question-texte");
 const modalePhoto = document.getElementById("modale-photo");
 const photoTitre = document.getElementById("photo-titre");
 const boutonFermerPhoto = document.getElementById("bouton-fermer-photo");
+const ecranPronostic = document.getElementById("ecran-pronostic");
+const champNaissance = document.getElementById("naissance");
+const champPoids = document.getElementById("poids");
+const champTaille = document.getElementById("taille");
+const erreurPronostic = document.getElementById("erreur-pronostic");
+const sectionJeu = document.getElementById("jeu");
+const boutonPleinEcran = document.getElementById("bouton-plein-ecran");
 
 // Réglages
 const GRAVITE = 0.6;
@@ -282,9 +289,11 @@ const sauverScores = (scores) => ecrireStockage("abb-scores", scores);
 
 // Envoie aussi la partie à la feuille Google Sheets, si URL_RESULTATS est réglée dans config.js.
 // "no-cors" + texte brut : pas de requête préalable, la réponse n'est pas lisible mais inutile.
+// Le temps part au format minutes:secondes:millisecondes, ex. 1:05:342
 function envoyerPartie(partie) {
   if (typeof URL_RESULTATS === "undefined" || !URL_RESULTATS) return;
-  fetch(URL_RESULTATS, { method: "POST", mode: "no-cors", body: JSON.stringify(partie) }).catch(() => {
+  const corps = JSON.stringify({ ...partie, temps: formaterTempsPrecis(partie.temps) });
+  fetch(URL_RESULTATS, { method: "POST", mode: "no-cors", body: corps }).catch(() => {
     // Pas de réseau : la partie reste au moins enregistrée dans le navigateur
   });
 }
@@ -292,6 +301,12 @@ function envoyerPartie(partie) {
 function formaterTemps(ms) {
   const secondes = Math.floor(ms / 1000);
   return `${Math.floor(secondes / 60)}:${String(secondes % 60).padStart(2, "0")}`;
+}
+
+function formaterTempsPrecis(ms) {
+  const millis = Math.round(ms);
+  const secondes = Math.floor(millis / 1000);
+  return `${Math.floor(secondes / 60)}:${String(secondes % 60).padStart(2, "0")}:${String(millis % 1000).padStart(3, "0")}`;
 }
 
 function lireRecord() {
@@ -381,8 +396,12 @@ function finDePartie(gagne) {
     score,
     temps: Math.round(tempsJeu),
     difficulte,
+    personnage: perso,
     gagne,
     reponse: null,
+    naissance: null,
+    poids_kg: null,
+    taille_cm: null,
     date: new Date().toISOString(),
   };
   sauverScores([...lireScores(), partieActuelle]);
@@ -399,12 +418,46 @@ function finDePartie(gagne) {
   }
 }
 
-function repondre(reponse) {
-  partieActuelle.reponse = reponse;
+function majPartie() {
   sauverScores(lireScores().map((p) => (p.id === partieActuelle.id ? partieActuelle : p)));
   envoyerPartie(partieActuelle);
+}
+
+function repondre(reponse) {
+  partieActuelle.reponse = reponse;
+  majPartie();
   ecranQuestion.classList.add("cache");
-  photoTitre.textContent = `${partieActuelle.prenom}, tu as répondu : ${reponse === "fille" ? "une fille 👧" : "un garçon 👦"} !`;
+  erreurPronostic.classList.add("cache");
+  ecranPronostic.classList.remove("cache");
+  champNaissance.focus();
+}
+
+// Nombre saisi à la française (virgule acceptée), ou NaN
+const lireNombre = (champ) => Number(champ.value.trim().replace(",", "."));
+
+function validerPronostic(e) {
+  e.preventDefault();
+  const naissance = champNaissance.value;
+  const poids = lireNombre(champPoids);
+  const taille = lireNombre(champTaille);
+  let erreur = "";
+  if (!naissance) erreur = "Choisis une date de naissance.";
+  else if (!(poids >= 1 && poids <= 7)) erreur = "Le poids doit être en kilos, entre 1 et 7 (ex. 3,4).";
+  else if (!(taille >= 30 && taille <= 65)) erreur = "La taille doit être en centimètres, entre 30 et 65 (ex. 50).";
+  if (erreur) {
+    erreurPronostic.textContent = erreur;
+    erreurPronostic.classList.remove("cache");
+    return;
+  }
+
+  const [annee, mois, jour] = naissance.split("-");
+  Object.assign(partieActuelle, { naissance: `${jour}/${mois}/${annee}`, poids_kg: poids, taille_cm: taille });
+  majPartie();
+  ecranPronostic.classList.add("cache");
+  const sexe = partieActuelle.reponse === "fille" ? "une fille 👧" : "un garçon 👦";
+  photoTitre.textContent =
+    `${partieActuelle.prenom}, tu as répondu : ${sexe}, né(e) le ${partieActuelle.naissance}, ` +
+    `${String(poids).replace(".", ",")} kg et ${String(taille).replace(".", ",")} cm !`;
   modalePhoto.classList.remove("cache");
   boutonFermerPhoto.focus();
 }
@@ -657,6 +710,14 @@ function dessinerFond() {
     ctx.fillRect(sx - c.rx, baseC, c.rx * 2, Math.max(0, H - baseC));
   }
 
+  // Taureau charolais au sommet de la colline de gauche, au départ
+  const colline = COLLINES[1];
+  const taureauX = colline.x + 45 - camX * 0.5;
+  if (taureauX + 40 > 0 && taureauX - 40 < W) {
+    const ecart = 45 / colline.rx;
+    dessinerTaureau(taureauX, baseC - colline.ry * Math.sqrt(1 - ecart * ecart) + 2);
+  }
+
   // Maison du départ, sur une terrasse à flanc de colline
   const maisonX = 330 - camX * 0.5;
   if (maisonX + 510 > 0 && maisonX - 60 < W) {
@@ -680,6 +741,103 @@ function dessinerFond() {
     const ecart = (chatX - (maisonX + 230)) / 280;
     dessinerChat(chatX, baseC - 150 * Math.sqrt(1 - ecart * ecart) + 1);
   }
+}
+
+// Taureau de race charolaise : robe blanc crème, très musclé, petite tête frisée,
+// cornes courtes et claires. (x, sol) = milieu de ses sabots, il regarde vers la droite.
+function dessinerTaureau(x, sol) {
+  const creme = "#f2e8d2";
+  const ombre = "#ddd0b4";
+
+  // Queue qui chasse les mouches, avec son toupet
+  const fouet = Math.sin(temps * 0.06) * 4;
+  ctx.strokeStyle = ombre;
+  ctx.lineWidth = 2;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(x - 25, sol - 27);
+  ctx.quadraticCurveTo(x - 31, sol - 18, x - 29 + fouet, sol - 9);
+  ctx.stroke();
+  ctx.fillStyle = "#c9b48c";
+  ctx.beginPath();
+  ctx.ellipse(x - 29 + fouet, sol - 7, 2, 3.5, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Pattes du côté opposé, plus sombres, puis pattes du côté visible
+  ctx.fillStyle = ombre;
+  ctx.fillRect(x - 17, sol - 13, 6, 12);
+  ctx.fillRect(x + 12, sol - 13, 6, 12);
+  ctx.fillStyle = creme;
+  ctx.fillRect(x - 22, sol - 14, 7, 13);
+  ctx.fillRect(x + 6, sol - 14, 7, 13);
+  ctx.fillStyle = "#8d7a63";
+  for (const px of [x - 17, x + 12, x - 22, x + 6]) ctx.fillRect(px, sol - 2, px === x - 22 || px === x + 6 ? 7 : 6, 2);
+
+  // Corps massif : arrière-train rond, ventre, bosse du garrot et fanon
+  ctx.fillStyle = creme;
+  ctx.beginPath();
+  ctx.ellipse(x - 13, sol - 23, 13, 11, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(x + 1, sol - 22, 20, 10, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(x + 12, sol - 28, 11, 8, -0.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(x + 16, sol - 22);
+  ctx.quadraticCurveTo(x + 20, sol - 10, x + 25, sol - 19);
+  ctx.fill();
+
+  // Relief des muscles de la cuisse
+  ctx.strokeStyle = ombre;
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.arc(x - 13, sol - 22, 7, -0.3, 1.6);
+  ctx.stroke();
+
+  // Tête courte et large, un peu baissée, avec le mufle rosé
+  ctx.fillStyle = creme;
+  ctx.beginPath();
+  ctx.ellipse(x + 26, sol - 24, 6.5, 7, 0.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#e9b9a6";
+  ctx.beginPath();
+  ctx.ellipse(x + 30, sol - 18.5, 4, 3, 0.3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#9c6b5c";
+  ctx.fillRect(x + 31, sol - 19.5, 1.5, 1.5);
+
+  // Toupet frisé sur le front, oreille, œil
+  ctx.fillStyle = ombre;
+  for (const [fx, fy] of [[23, -31], [26, -32], [24.5, -29]]) {
+    ctx.beginPath();
+    ctx.arc(x + fx, sol + fy, 1.6, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.fillStyle = creme;
+  ctx.beginPath();
+  ctx.ellipse(x + 19, sol - 28, 4, 2, -0.4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#2b2118";
+  ctx.beginPath();
+  ctx.arc(x + 27, sol - 26, 1.2, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Cornes courtes, claires, recourbées vers l'avant
+  ctx.strokeStyle = "#efe6cf";
+  ctx.lineWidth = 2.2;
+  ctx.beginPath();
+  ctx.moveTo(x + 22, sol - 31);
+  ctx.quadraticCurveTo(x + 19, sol - 37, x + 23, sol - 39);
+  ctx.moveTo(x + 27, sol - 31);
+  ctx.quadraticCurveTo(x + 29, sol - 37, x + 33, sol - 37);
+  ctx.stroke();
+  ctx.fillStyle = "#7d6a55";
+  ctx.beginPath();
+  ctx.arc(x + 23, sol - 39, 1, 0, Math.PI * 2);
+  ctx.arc(x + 33, sol - 37, 1, 0, Math.PI * 2);
+  ctx.fill();
 }
 
 // Vieille ville d'Annecy : maisons colorées [décalage x, largeur, hauteur, couleur]
@@ -2081,6 +2239,8 @@ document.querySelectorAll("[data-reponse]").forEach((bouton) => {
   bouton.addEventListener("click", () => repondre(bouton.dataset.reponse));
 });
 
+ecranPronostic.addEventListener("submit", validerPronostic);
+
 boutonFermerPhoto.addEventListener("click", fermerPhoto);
 modalePhoto.addEventListener("click", (e) => {
   if (e.target === modalePhoto) fermerPhoto();
@@ -2090,6 +2250,44 @@ modalePhoto.addEventListener("click", (e) => {
 const dernierJoueur = lireStockage("abb-joueur", {});
 champPrenom.value = dernierJoueur.prenom ?? "";
 champNom.value = dernierJoueur.nom ?? "";
+
+// ---------- Plein écran ----------
+// Vrai plein écran quand le navigateur le permet (Android, ordinateur),
+// sinon (iPhone) la zone de jeu occupe simplement toute la page.
+
+const pleinEcranNatif = () => document.fullscreenElement ?? document.webkitFullscreenElement;
+const estEnPleinEcran = () => Boolean(pleinEcranNatif()) || sectionJeu.classList.contains("plein-ecran");
+
+function majBoutonPleinEcran() {
+  const actif = estEnPleinEcran();
+  boutonPleinEcran.textContent = actif ? "✕ Quitter" : "⛶ Plein écran";
+  boutonPleinEcran.setAttribute("aria-label", actif ? "Quitter le plein écran" : "Passer en plein écran");
+  document.body.classList.toggle("jeu-plein-ecran", actif);
+}
+
+async function basculerPleinEcran() {
+  if (estEnPleinEcran()) {
+    sectionJeu.classList.remove("plein-ecran");
+    if (pleinEcranNatif()) await (document.exitFullscreen ?? document.webkitExitFullscreen).call(document);
+  } else {
+    const demander = sectionJeu.requestFullscreen ?? sectionJeu.webkitRequestFullscreen;
+    try {
+      await demander.call(sectionJeu);
+      // Sur mobile, on bascule en paysage si possible
+      await screen.orientation?.lock?.("landscape").catch(() => {});
+    } catch {
+      sectionJeu.classList.add("plein-ecran");
+    }
+  }
+  majBoutonPleinEcran();
+}
+
+boutonPleinEcran.addEventListener("click", (e) => {
+  basculerPleinEcran();
+  e.currentTarget.blur();
+});
+document.addEventListener("fullscreenchange", majBoutonPleinEcran);
+document.addEventListener("webkitfullscreenchange", majBoutonPleinEcran);
 
 boutonMessage.addEventListener("click", () => {
   if (enPause) {

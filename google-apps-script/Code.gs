@@ -5,14 +5,18 @@
 // uniquement, ne jamais le mettre dans le dépôt GitHub.
 const CLE_ADMIN = "CHANGER-CE-MOT-DE-PASSE";
 
-const COLONNES = ["id", "date", "prenom", "nom", "score", "temps", "difficulte", "gagne", "reponse"];
+// Nouvelles colonnes toujours ajoutées à la fin, pour ne pas décaler les anciennes lignes
+const COLONNES = [
+  "id", "date", "prenom", "nom", "score", "temps", "difficulte", "gagne", "reponse",
+  "personnage", "naissance", "poids_kg", "taille_cm",
+];
 
 function feuille() {
   const f = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
-  if (f.getLastRow() === 0) {
-    // Tout en texte brut : la date ISO et les identifiants restent tels quels
-    f.getRange(1, 1, f.getMaxRows(), COLONNES.length).setNumberFormat("@");
-    f.appendRow(COLONNES);
+  // Crée ou complète la ligne d'en-tête
+  const entete = f.getRange(1, 1, 1, COLONNES.length);
+  if (entete.getDisplayValues()[0].join() !== COLONNES.join()) {
+    entete.setNumberFormat("@").setValues([COLONNES]);
   }
   return f;
 }
@@ -23,7 +27,7 @@ function texteSur(valeur) {
   return /^[=+\-@]/.test(texte) ? "'" + texte : texte;
 }
 
-// Une partie terminée, puis la même partie complétée par la réponse : même id, même ligne
+// Une partie terminée, puis la même partie complétée (réponse, pronostics) : même id, même ligne
 function doPost(e) {
   const p = JSON.parse(e.postData.contents);
   const ligne = [
@@ -32,10 +36,14 @@ function doPost(e) {
     texteSur(p.prenom),
     texteSur(p.nom),
     Number(p.score) || 0,
-    Number(p.temps) || 0,
+    texteSur(p.temps), // minutes:secondes:millisecondes
     texteSur(p.difficulte),
     p.gagne === true,
     texteSur(p.reponse),
+    texteSur(p.personnage),
+    texteSur(p.naissance), // jj/mm/aaaa
+    p.poids_kg == null ? "" : texteSur(p.poids_kg),
+    p.taille_cm == null ? "" : texteSur(p.taille_cm),
   ];
 
   const verrou = LockService.getScriptLock();
@@ -44,8 +52,9 @@ function doPost(e) {
     const f = feuille();
     const ids = f.getRange(1, 1, f.getLastRow(), 1).getDisplayValues().map((r) => r[0]);
     const index = ids.indexOf(ligne[0]);
-    if (index > 0) f.getRange(index + 1, 1, 1, ligne.length).setValues([ligne]);
-    else f.appendRow(ligne);
+    const numero = index > 0 ? index + 1 : f.getLastRow() + 1;
+    // Tout en texte brut : la date, le temps et les identifiants restent tels quels
+    f.getRange(numero, 1, 1, ligne.length).setNumberFormat("@").setValues([ligne]);
   } finally {
     verrou.releaseLock();
   }

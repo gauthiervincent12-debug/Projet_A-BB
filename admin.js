@@ -5,6 +5,7 @@ const CLE_SCORES = "abb-scores";
 const CLE_MOT_DE_PASSE = "abb-cle-admin";
 const NOMS_DIFFICULTE = { facile: "Facile", moyen: "Moyen", difficile: "Difficile" };
 const NOMS_REPONSE = { fille: "👧 Fille", "garçon": "👦 Garçon" };
+const NOMS_PERSONNAGE = { homme: "Homme", femme: "Femme" };
 
 const listeScores = document.getElementById("liste-scores");
 const aucunScore = document.getElementById("aucun-score");
@@ -31,7 +32,6 @@ function depuisFeuille(p) {
   return {
     ...p,
     score: Number(p.score) || 0,
-    temps: Number(p.temps) || 0,
     gagne: String(p.gagne).toUpperCase() === "TRUE",
     reponse: p.reponse || null,
   };
@@ -64,10 +64,16 @@ async function chargerEnLigne() {
   }
 }
 
-function formaterTemps(ms) {
-  const secondes = Math.floor(ms / 1000);
-  return `${Math.floor(secondes / 60)}:${String(secondes % 60).padStart(2, "0")}`;
+// Temps au format minutes:secondes:millisecondes. La feuille l'envoie déjà formaté ;
+// les parties locales (et les plus anciennes de la feuille) sont en millisecondes.
+function formaterTemps(temps) {
+  if (String(temps).includes(":")) return String(temps);
+  const millis = Math.round(Number(temps) || 0);
+  const secondes = Math.floor(millis / 1000);
+  return `${Math.floor(secondes / 60)}:${String(secondes % 60).padStart(2, "0")}:${String(millis % 1000).padStart(3, "0")}`;
 }
+
+const enFrancais = (nombre) => (nombre === null || nombre === undefined || nombre === "" ? "—" : String(nombre).replace(".", ","));
 
 function formaterDate(iso) {
   const date = new Date(iso);
@@ -85,8 +91,12 @@ function lignes() {
       score: p.score,
       temps: formaterTemps(p.temps),
       difficulte: NOMS_DIFFICULTE[p.difficulte] ?? p.difficulte,
+      personnage: NOMS_PERSONNAGE[p.personnage] ?? "—",
       resultat: p.gagne ? "Arrivé" : "Perdu",
       reponse: NOMS_REPONSE[p.reponse] ?? "—",
+      naissance: p.naissance || "—",
+      poids: enFrancais(p.poids_kg),
+      taille: enFrancais(p.taille_cm),
     }));
 }
 
@@ -105,7 +115,7 @@ function afficher() {
       for (const [cle, valeur] of Object.entries(ligne)) {
         const td = document.createElement("td");
         td.textContent = valeur;
-        if (cle === "score" || cle === "temps") td.className = "nombre";
+        if (["score", "temps", "poids", "taille"].includes(cle)) td.className = "nombre";
         tr.append(td);
       }
       return tr;
@@ -115,7 +125,10 @@ function afficher() {
 
 // Export CSV lisible directement par Excel (séparateur ; et BOM UTF-8)
 function exporter() {
-  const entetes = ["Date", "Prénom", "Nom", "Score", "Temps", "Difficulté", "Résultat", "Fille ou garçon ?"];
+  const entetes = [
+    "Date", "Prénom", "Nom", "Score", "Temps", "Difficulté", "Personnage", "Résultat",
+    "Fille ou garçon ?", "Date de naissance", "Poids (kg)", "Taille (cm)",
+  ];
   const echapper = (v) => `"${String(v).replace(/"/g, '""')}"`;
   const contenu = [entetes, ...lignes().map((l) => Object.values(l))]
     .map((ligne) => ligne.map(echapper).join(";"))
