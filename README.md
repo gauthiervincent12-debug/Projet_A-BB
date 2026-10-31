@@ -52,3 +52,7 @@ Contrôles : ← → ou Q/D pour se déplacer, Espace / ↑ / Z pour sauter, P p
 ## Modifier le niveau
 
 Le niveau est décrit dans la fonction `creerNiveau()` de `script.js` : plateformes (`colonne`, `planche`), ennemis et pièces.
+
+## Mise en ligne (GitHub Pages)
+
+Les navigateurs gardent les fichiers en cache. Après une modification de `style.css`, `config.js`, `script.js` ou `admin.js`, changer le numéro `?v=…` qui suit leur nom dans `index.html` et `admin.html` : les joueurs reçoivent alors tout de suite la nouvelle version.
