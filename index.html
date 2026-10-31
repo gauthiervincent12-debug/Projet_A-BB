@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Projet A-BB — L'Ascension</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>Projet A-BB</h1>
+    <nav>
+      <a href="#jeu">Jouer</a>
+      <a href="#regles">Règles</a>
+    </nav>
+  </header>
+
+  <main>
+    <section id="jeu">
+      <h2>L'Ascension</h2>
+
+      <div class="hud">
+        <span>Score : <strong id="score">0</strong></span>
+        <span>Temps : <strong id="temps">0:00</strong></span>
+        <span>Tétines : <strong id="pieces">0</strong></span>
+        <span>Difficulté : <strong id="difficulte">Moyen</strong></span>
+        <span>Zone : <strong id="zone">—</strong></span>
+        <span>Record : <strong id="record">0</strong></span>
+      </div>
+
+      <div class="zone-jeu">
+        <canvas id="canvas" width="800" height="450"></canvas>
+
+        <div id="ecran-selection" class="ecran">
+          <h3>Nouvelle partie</h3>
+          <p class="etape">1. Joueur</p>
+          <div class="identite">
+            <input id="prenom" type="text" placeholder="Prénom" maxlength="30" autocomplete="given-name" aria-label="Prénom">
+            <input id="nom" type="text" placeholder="Nom" maxlength="30" autocomplete="family-name" aria-label="Nom">
+          </div>
+          <p id="erreur-identite" class="erreur cache">Entre ton prénom et ton nom pour jouer.</p>
+          <p class="etape">2. Difficulté</p>
+          <div class="difficultes">
+            <button class="bouton-difficulte" data-difficulte="facile">Facile</button>
+            <button class="bouton-difficulte actif" data-difficulte="moyen">Moyen</button>
+            <button class="bouton-difficulte" data-difficulte="difficile">Difficile</button>
+          </div>
+          <p class="etape">3. Personnage (clique pour jouer)</p>
+          <div class="choix">
+            <button class="carte-perso" data-perso="homme">
+              <canvas width="80" height="100"></canvas>
+              <span>Homme</span>
+            </button>
+            <button class="carte-perso" data-perso="femme">
+              <canvas width="80" height="100"></canvas>
+              <span>Femme</span>
+            </button>
+          </div>
+          <p class="aide">← → pour avancer · Espace pour sauter</p>
+        </div>
+
+        <div id="ecran-message" class="ecran cache">
+          <h3 id="message-titre"></h3>
+          <p id="message-texte"></p>
+          <button id="bouton-message">Rejouer</button>
+        </div>
+
+        <div id="ecran-question" class="ecran cache">
+          <h3>Alors fille ou garçon ?</h3>
+          <p id="question-texte"></p>
+          <div class="choix-reponse">
+            <button data-reponse="fille">👧 Fille</button>
+            <button data-reponse="garçon">👦 Garçon</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="controles-tactiles">
+        <button data-tactile="ArrowLeft" aria-label="Gauche">◀</button>
+        <button data-tactile="ArrowRight" aria-label="Droite">▶</button>
+        <button data-tactile="Space" aria-label="Sauter">⤒</button>
+      </div>
+    </section>
+
+    <section id="regles">
+      <h2>Règles</h2>
+      <ul>
+        <li>🌄 Traverse les <strong>collines</strong>, franchis le <strong>lac</strong> sur les pontons, puis gravis les <strong>montagnes</strong> : passe le drapeau du sommet et rejoins la poussette !</li>
+        <li>📋 Ton score, ton temps et ta réponse sont enregistrés avec ton prénom et ton nom.</li>
+        <li>🍼 Tétine : +10 points · 🦔 Hérisson (collines) ou 🐐 bouquetin (montagne) écrasé en sautant dessus : +50 points</li>
+        <li>💧 Tomber dans l'eau ou dans un ravin, ou toucher un animal de côté : −1 vie</li>
+        <li>🚩 Les balises vertes sont des points de reprise.</li>
+        <li>❤️ Tu commences avec 4 vies, affichées en haut à gauche de l'écran de jeu.</li>
+        <li>🎚️ Facile : sol continu, pontons fixes, peu d'ennemis · Moyen : niveau normal · Difficile : plus d'ennemis, plus rapides, et des pontons mobiles presque partout.</li>
+        <li>Bonus à l'arrivée : +100 points par vie restante.</li>
+        <li>Contrôles : flèches ← → (ou Q / D), saut avec Espace / ↑ / Z, <kbd>P</kbd> pour la pause. Boutons à l'écran sur mobile.</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer>
+    <p>Projet A-BB — HTML, CSS et JavaScript</p>
+  </footer>
+
+  <div id="modale-photo" class="modale cache" role="dialog" aria-modal="true" aria-labelledby="photo-titre">
+    <div class="modale-contenu">
+      <h3 id="photo-titre"></h3>
+      <!-- Photo temporaire : remplacer le fichier images/photo.jpg -->
+      <img id="photo" src="images/photo.jpg" alt="Photo surprise">
+      <button id="bouton-fermer-photo">Rejouer</button>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

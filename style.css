@@ -1,0 +1,452 @@
+:root {
+  --fond: #0f1226;
+  --carte: #1b1f3b;
+  --texte: #e8eaf6;
+  --accent: #ffd54f;
+  --accent-2: #4fc3f7;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: "Segoe UI", system-ui, sans-serif;
+  background: var(--fond);
+  color: var(--texte);
+  line-height: 1.6;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background: var(--carte);
+}
+
+header h1 {
+  font-size: 1.4rem;
+  color: var(--accent);
+}
+
+nav a {
+  color: var(--texte);
+  text-decoration: none;
+  margin-left: 1rem;
+}
+
+nav a:hover {
+  color: var(--accent);
+}
+
+main {
+  flex: 1;
+  width: 100%;
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem;
+}
+
+section {
+  margin-bottom: 2rem;
+}
+
+h2 {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.hud {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-around;
+  gap: 0.25rem 1rem;
+  background: var(--carte);
+  border-radius: 8px;
+  padding: 0.5rem;
+  margin: 0 auto 0.75rem;
+  max-width: 800px;
+}
+
+.hud strong {
+  color: var(--accent);
+}
+
+.zone-jeu {
+  position: relative;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+#canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+  background: #4fa8e8;
+  box-shadow: 0 0 24px rgba(79, 195, 247, 0.25);
+  touch-action: none;
+}
+
+.ecran {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  text-align: center;
+  padding: 1rem;
+  background: rgba(15, 18, 38, 0.8);
+  border-radius: 12px;
+  overflow-y: auto;
+}
+
+.ecran.cache {
+  display: none;
+}
+
+.ecran h3 {
+  font-size: 2rem;
+  color: var(--accent);
+}
+
+.choix {
+  display: flex;
+  gap: 1.5rem;
+}
+
+#ecran-selection {
+  gap: 0.6rem;
+}
+
+#ecran-selection h3 {
+  font-size: 1.5rem;
+}
+
+.identite {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.identite input {
+  width: 10rem;
+  font-size: 1rem;
+  padding: 0.4rem 0.7rem;
+  border-radius: 8px;
+  border: 2px solid var(--accent-2);
+  background: var(--carte);
+  color: var(--texte);
+}
+
+.identite input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.erreur {
+  color: #ff8a80;
+  font-size: 0.9rem;
+}
+
+.erreur.cache {
+  display: none;
+}
+
+.choix-reponse {
+  display: flex;
+  gap: 1rem;
+}
+
+.choix-reponse button {
+  font-size: 1.3rem;
+}
+
+.modale {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.75);
+}
+
+.modale.cache {
+  display: none;
+}
+
+.modale-contenu {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 720px;
+  max-height: 100%;
+  overflow-y: auto;
+  padding: 1rem;
+  text-align: center;
+  background: var(--carte);
+  border-radius: 12px;
+}
+
+.modale-contenu h3 {
+  color: var(--accent);
+}
+
+.modale-contenu img {
+  max-width: 100%;
+  max-height: 65vh;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.tableau-conteneur {
+  overflow-x: auto;
+  background: var(--carte);
+  border-radius: 8px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+th,
+td {
+  padding: 0.45rem 0.7rem;
+  text-align: left;
+  white-space: nowrap;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+th {
+  color: var(--accent);
+}
+
+td.nombre {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.backoffice {
+  max-width: 1100px;
+}
+
+.statistiques {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.75rem;
+}
+
+.statistiques div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1rem;
+  background: var(--carte);
+  border-radius: 8px;
+}
+
+.statistiques strong {
+  font-size: 2rem;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.actions .bouton-secondaire {
+  margin: 0;
+}
+
+.note {
+  margin-top: 0.75rem;
+  text-align: center;
+  font-size: 0.85rem;
+  opacity: 0.7;
+}
+
+#aucun-score {
+  text-align: center;
+  padding: 1rem;
+  opacity: 0.8;
+}
+
+.bouton-secondaire {
+  display: block;
+  margin: 0.75rem auto 0;
+  font-size: 0.9rem;
+  padding: 0.4rem 1.2rem;
+  background: transparent;
+  color: var(--texte);
+  border: 1px solid var(--accent-2);
+}
+
+.etape {
+  font-size: 0.95rem;
+  opacity: 0.85;
+  margin-bottom: -0.5rem;
+}
+
+.difficultes {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.difficultes .bouton-difficulte {
+  font-size: 1rem;
+  padding: 0.4rem 1.1rem;
+  background: var(--carte);
+  color: var(--texte);
+  border: 2px solid var(--accent-2);
+}
+
+.difficultes .bouton-difficulte.actif {
+  background: var(--accent);
+  color: var(--fond);
+  border-color: var(--accent);
+}
+
+button {
+  font-size: 1.1rem;
+  padding: 0.6rem 2rem;
+  border: none;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--fond);
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+button:hover {
+  transform: scale(1.05);
+}
+
+.choix .carte-perso {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 12px;
+  border: 2px solid var(--accent-2);
+  background: var(--carte);
+  color: var(--texte);
+}
+
+.choix .carte-perso:hover {
+  border-color: var(--accent);
+}
+
+.carte-perso canvas {
+  background: linear-gradient(#4fa8e8, #cfeeff);
+  border-radius: 8px;
+}
+
+.aide {
+  font-size: 0.9rem;
+  opacity: 0.85;
+}
+
+.controles-tactiles {
+  display: none;
+  justify-content: space-between;
+  gap: 0.75rem;
+  max-width: 800px;
+  margin: 0.75rem auto 0;
+}
+
+.controles-tactiles button {
+  flex: 1;
+  font-size: 1.6rem;
+  padding: 0.8rem;
+  border-radius: 12px;
+  user-select: none;
+  touch-action: none;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .controles-tactiles {
+    display: flex;
+  }
+}
+
+@media (max-width: 520px) {
+  .ecran h3 {
+    font-size: 1.3rem;
+  }
+
+  .ecran {
+    gap: 0.5rem;
+  }
+
+  .carte-perso canvas {
+    width: 40px;
+    height: 50px;
+  }
+
+  .difficultes .bouton-difficulte {
+    font-size: 0.85rem;
+    padding: 0.3rem 0.7rem;
+  }
+
+  .etape {
+    display: none;
+  }
+
+  .identite input {
+    width: 7.5rem;
+    font-size: 0.9rem;
+    padding: 0.3rem 0.5rem;
+  }
+
+  .choix-reponse button {
+    font-size: 1rem;
+    padding: 0.5rem 1.2rem;
+  }
+}
+
+#regles ul {
+  list-style: none;
+  background: var(--carte);
+  border-radius: 8px;
+  padding: 1rem 1.5rem;
+}
+
+#regles li {
+  padding: 0.25rem 0;
+}
+
+kbd {
+  background: var(--fond);
+  border: 1px solid var(--accent-2);
+  border-radius: 4px;
+  padding: 0 0.4rem;
+}
+
+footer {
+  text-align: center;
+  padding: 1rem;
+  background: var(--carte);
+  font-size: 0.9rem;
+  opacity: 0.8;
+}

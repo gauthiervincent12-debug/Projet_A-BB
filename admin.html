@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Projet A-BB — Backoffice</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>Projet A-BB — Backoffice</h1>
+    <nav>
+      <a href="index.html">Retour au jeu</a>
+    </nav>
+  </header>
+
+  <main class="backoffice">
+    <section>
+      <h2>Résumé</h2>
+      <div class="statistiques">
+        <div><strong id="stat-parties">0</strong><span>parties</span></div>
+        <div><strong id="stat-arrivees">0</strong><span>arrivées à la poussette</span></div>
+        <div><strong id="stat-fille">0</strong><span>👧 Fille</span></div>
+        <div><strong id="stat-garcon">0</strong><span>👦 Garçon</span></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Parties enregistrées</h2>
+      <div class="tableau-conteneur">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Prénom</th>
+              <th>Nom</th>
+              <th>Score</th>
+              <th>Temps</th>
+              <th>Difficulté</th>
+              <th>Résultat</th>
+              <th>Fille ou garçon ?</th>
+            </tr>
+          </thead>
+          <tbody id="liste-scores"></tbody>
+        </table>
+        <p id="aucun-score">Aucune partie enregistrée pour l'instant.</p>
+      </div>
+      <div class="actions">
+        <button id="bouton-exporter">Exporter (CSV / Excel)</button>
+        <button id="bouton-effacer" class="bouton-secondaire">Tout effacer</button>
+      </div>
+      <p class="note">Les données affichées sont celles enregistrées dans ce navigateur.</p>
+    </section>
+  </main>
+
+  <script src="admin.js"></script>
+</body>
+</html>
