@@ -37,6 +37,7 @@ const DRAPEAU = { x: 6100, y: -150 };
 const POUSSETTE = { x: 6330, y: -150 };
 const POINTS_REPRISE = [80, 2300, 3950];
 const VIES_DEPART = 4;
+const LIMITE_NEIGE = 100; // Les rochers plus hauts que ça sont enneigés
 
 const DIFFICULTES = {
   facile: { nom: "Facile", vitesseEnnemis: 1 },
@@ -97,10 +98,27 @@ function planche(x, y, w, mouvement) {
   return p;
 }
 
-const TAILLES_ENNEMIS = { herisson: [34, 24], bouquetin: [38, 34], castor: [40, 24] };
+const TAILLES_ENNEMIS = {
+  herisson: [34, 24],
+  lievre: [32, 28],
+  renard: [42, 26],
+  castor: [40, 24],
+  chamois: [36, 32],
+  marmotte: [28, 24],
+  bouquetin: [44, 40],
+};
 
-function ennemi(x, sol, min, max, vitesse, type = x >= LAC.fin ? "bouquetin" : "herisson") {
-  // Hérissons dans les collines, bouquetins (plus grands) dans la montagne, castor au lac
+const auHasard = (liste) => liste[Math.floor(Math.random() * liste.length)];
+
+// Collines : hérissons, lièvres et renards mélangés au hasard.
+// Montagne : chamois et marmottes dans l'herbe, bouquetins dans la neige.
+function typeSelonZone(x, sol) {
+  if (x < LAC.fin) return auHasard(["herisson", "lievre", "renard"]);
+  if (sol < LIMITE_NEIGE) return "bouquetin";
+  return auHasard(["chamois", "marmotte"]);
+}
+
+function ennemi(x, sol, min, max, vitesse, type = typeSelonZone(x, sol)) {
   const [w, h] = TAILLES_ENNEMIS[type];
   return { type, x, y: sol - h, w, h, vx: -vitesse, min, max, mort: false, anim: 0 };
 }
@@ -262,6 +280,15 @@ function ecrireStockage(cle, valeur) {
 const lireScores = () => lireStockage("abb-scores", []);
 const sauverScores = (scores) => ecrireStockage("abb-scores", scores);
 
+// Envoie aussi la partie à la feuille Google Sheets, si URL_RESULTATS est réglée dans config.js.
+// "no-cors" + texte brut : pas de requête préalable, la réponse n'est pas lisible mais inutile.
+function envoyerPartie(partie) {
+  if (typeof URL_RESULTATS === "undefined" || !URL_RESULTATS) return;
+  fetch(URL_RESULTATS, { method: "POST", mode: "no-cors", body: JSON.stringify(partie) }).catch(() => {
+    // Pas de réseau : la partie reste au moins enregistrée dans le navigateur
+  });
+}
+
 function formaterTemps(ms) {
   const secondes = Math.floor(ms / 1000);
   return `${Math.floor(secondes / 60)}:${String(secondes % 60).padStart(2, "0")}`;
@@ -359,6 +386,7 @@ function finDePartie(gagne) {
     date: new Date().toISOString(),
   };
   sauverScores([...lireScores(), partieActuelle]);
+  envoyerPartie(partieActuelle);
 
   const resume =
     `Score : ${score} · Temps : ${formaterTemps(tempsJeu)} (${DIFFICULTES[difficulte].nom})` +
@@ -374,6 +402,7 @@ function finDePartie(gagne) {
 function repondre(reponse) {
   partieActuelle.reponse = reponse;
   sauverScores(lireScores().map((p) => (p.id === partieActuelle.id ? partieActuelle : p)));
+  envoyerPartie(partieActuelle);
   ecranQuestion.classList.add("cache");
   photoTitre.textContent = `${partieActuelle.prenom}, tu as répondu : ${reponse === "fille" ? "une fille 👧" : "un garçon 👦"} !`;
   modalePhoto.classList.remove("cache");
@@ -501,7 +530,8 @@ function mettreAJour(dt) {
     }
     if (j.invulnerable > 0 || !chevauche(j, e)) continue;
     const basAvant = j.y + j.h - j.vy * dt;
-    if (j.vy > 0 && basAvant <= e.y + 10) {
+    // Les hérissons piquent : impossible de leur sauter dessus
+    if (e.type !== "herisson" && j.vy > 0 && basAvant <= e.y + 10) {
       e.mort = true;
       j.vy = -9;
       ajouterScore(50);
@@ -604,6 +634,16 @@ function dessinerFond() {
     ctx.fillRect(lx, baseC - 48, 1300, 8);
     ctx.fillStyle = "#7cc7ef";
     ctx.fillRect(lx, baseC - 40, 1300, Math.max(0, H - baseC + 40));
+    // Annecy au bord du lac, visible en arrivant au lac (juste après la dernière colline),
+    // un peu agrandie pour paraître plus proche
+    const villeX = lx + 360;
+    if (villeX < W && villeX + 520 > 0) {
+      ctx.save();
+      ctx.translate(villeX, baseC - 40);
+      ctx.scale(1.3, 1.3);
+      dessinerAnnecy(0, 0);
+      ctx.restore();
+    }
   }
 
   // Collines vertes
@@ -634,7 +674,220 @@ function dessinerFond() {
     ctx.lineTo(maisonX - 50, baseC);
     ctx.fill();
     dessinerMaison(maisonX, solMaison);
+
+    // Chat assis sur la colline, juste à droite de la maison
+    const chatX = maisonX + 195;
+    const ecart = (chatX - (maisonX + 230)) / 280;
+    dessinerChat(chatX, baseC - 150 * Math.sqrt(1 - ecart * ecart) + 1);
   }
+}
+
+// Vieille ville d'Annecy : maisons colorées [décalage x, largeur, hauteur, couleur]
+const VIEILLE_VILLE = [
+  [64, 15, 24, "#e8b65c"], [79, 13, 30, "#e59a7a"], [92, 16, 22, "#f2d27a"],
+  [108, 12, 28, "#d9826b"], [134, 14, 26, "#f0c987"], [148, 16, 32, "#e8a07f"],
+  [164, 13, 24, "#f4dc8e"], [177, 15, 29, "#cf7a5c"], [192, 14, 21, "#e9bf6e"],
+];
+
+// (x, rive) = début de la ville, niveau de l'eau
+function dessinerAnnecy(x, rive) {
+  const sol = rive - 3;
+  const tuiles = "#a5452f";
+  const ardoise = "#56616b";
+  const fenetres = (fx, fy, largeur, hauteur) => {
+    ctx.fillStyle = "rgba(70, 50, 40, 0.55)";
+    for (let wy = fy + 4; wy < fy + hauteur - 3; wy += 6) {
+      for (let wx = fx + 3; wx < fx + largeur - 2; wx += 4) ctx.fillRect(wx, wy, 1.5, 2);
+    }
+  };
+  const toitPointu = (tx, ty, largeur, hauteur, couleur) => {
+    ctx.fillStyle = couleur;
+    ctx.beginPath();
+    ctx.moveTo(tx - 1, ty);
+    ctx.lineTo(tx + largeur / 2, ty - hauteur);
+    ctx.lineTo(tx + largeur + 1, ty);
+    ctx.fill();
+  };
+
+  // Colline du château
+  ctx.fillStyle = "#4f9a4f";
+  ctx.beginPath();
+  ctx.ellipse(x + 30, sol, 40, 22, 0, Math.PI, Math.PI * 2);
+  ctx.fill();
+
+  // Château d'Annecy : courtines, tour carrée et grosse tour de la Reine
+  const solChateau = sol - 18;
+  ctx.fillStyle = "#d8cfbf";
+  ctx.fillRect(x + 12, solChateau - 16, 36, 16);
+  ctx.fillRect(x + 4, solChateau - 28, 11, 28);
+  ctx.fillRect(x + 44, solChateau - 32, 14, 32);
+  ctx.fillStyle = "#c2b8a6";
+  ctx.fillRect(x + 12, solChateau - 4, 36, 4);
+  toitPointu(x + 12, solChateau - 16, 36, 7, ardoise);
+  toitPointu(x + 4, solChateau - 28, 11, 10, ardoise);
+  toitPointu(x + 44, solChateau - 32, 14, 9, ardoise);
+  fenetres(x + 4, solChateau - 28, 11, 28);
+  fenetres(x + 44, solChateau - 32, 14, 32);
+
+  // Maisons de la vieille ville
+  for (const [dx, largeur, hauteur, couleur] of VIEILLE_VILLE) {
+    ctx.fillStyle = couleur;
+    ctx.fillRect(x + dx, sol - hauteur, largeur, hauteur);
+    fenetres(x + dx, sol - hauteur, largeur, hauteur);
+    toitPointu(x + dx, sol - hauteur, largeur, 6, tuiles);
+  }
+
+  // Clocher de l'église Saint-Maurice
+  ctx.fillStyle = "#cdbfa8";
+  ctx.fillRect(x + 121, sol - 44, 11, 44);
+  ctx.fillStyle = "rgba(70, 50, 40, 0.55)";
+  ctx.fillRect(x + 125, sol - 38, 3, 5);
+  toitPointu(x + 121, sol - 44, 11, 16, ardoise);
+
+  // Quai et canal du Thiou devant les maisons
+  ctx.fillStyle = "#b9b2a5";
+  ctx.fillRect(x + 60, sol, 150, 3);
+
+  // Palais de l'Île : prison en forme de proue de bateau, au milieu du canal
+  const px = x + 140;
+  ctx.fillStyle = "#c9c1b2";
+  ctx.beginPath();
+  ctx.moveTo(px - 14, rive + 4);
+  ctx.lineTo(px - 2, rive - 22);
+  ctx.lineTo(px + 26, rive - 22);
+  ctx.lineTo(px + 30, rive + 4);
+  ctx.fill();
+  ctx.fillStyle = "#aea596";
+  ctx.fillRect(px - 12, rive, 42, 4);
+  ctx.fillStyle = ardoise;
+  ctx.beginPath();
+  ctx.moveTo(px - 4, rive - 21);
+  ctx.lineTo(px + 6, rive - 30);
+  ctx.lineTo(px + 28, rive - 30);
+  ctx.lineTo(px + 28, rive - 21);
+  ctx.fill();
+  ctx.fillStyle = "#c9c1b2";
+  ctx.fillRect(px + 18, rive - 38, 6, 10);
+  toitPointu(px + 18, rive - 38, 6, 6, ardoise);
+  fenetres(px + 2, rive - 20, 22, 18);
+
+  // Pont des Amours au-dessus du canal du Vassé
+  ctx.strokeStyle = "#f0ece4";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(x + 214, sol + 2);
+  ctx.quadraticCurveTo(x + 226, sol - 8, x + 238, sol + 2);
+  ctx.stroke();
+  ctx.fillStyle = "#3c6e8f";
+  ctx.fillRect(x + 216, sol - 4, 20, 1);
+
+  // Grands arbres des jardins de l'Europe
+  for (const [dx, r] of [[250, 9], [264, 11], [280, 8], [294, 10], [310, 9]]) {
+    ctx.fillStyle = "#5b4636";
+    ctx.fillRect(x + dx - 1, sol - r - 2, 2, r + 2);
+    ctx.fillStyle = dx % 28 ? "#3f8f46" : "#4f9f4f";
+    ctx.beginPath();
+    ctx.arc(x + dx, sol - r - 6, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Reflets de la ville dans l'eau
+  ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
+  for (let dx = 10; dx < 320; dx += 22) {
+    ctx.fillRect(x + dx + Math.sin(temps * 0.03 + dx) * 3, rive + 8 + (dx % 3) * 4, 12, 1.5);
+  }
+
+  // Petit voilier qui dérive au large
+  const vx = x + 340 + Math.sin(temps * 0.004) * 30;
+  const vy = rive + 14;
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.moveTo(vx, vy - 3);
+  ctx.lineTo(vx, vy - 20);
+  ctx.lineTo(vx + 11, vy - 3);
+  ctx.fill();
+  ctx.fillStyle = "#e57373";
+  ctx.beginPath();
+  ctx.moveTo(vx - 1, vy - 18);
+  ctx.lineTo(vx - 1, vy - 4);
+  ctx.lineTo(vx - 9, vy - 4);
+  ctx.fill();
+  ctx.fillStyle = "#6d4c41";
+  ctx.beginPath();
+  ctx.moveTo(vx - 10, vy - 3);
+  ctx.lineTo(vx + 13, vy - 3);
+  ctx.lineTo(vx + 9, vy + 1);
+  ctx.lineTo(vx - 7, vy + 1);
+  ctx.fill();
+}
+
+// Chat gris clair et blanc assis, vu de trois quarts ; (x, sol) = milieu de ses pattes
+function dessinerChat(x, sol) {
+  // Queue qui ondule doucement, avec le bout tordu en crochet
+  const boutX = x + 11 + Math.sin(temps * 0.05) * 2;
+  const boutY = sol - 11;
+  ctx.strokeStyle = "#b8bcc2";
+  ctx.lineWidth = 2.5;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.beginPath();
+  ctx.moveTo(x + 4, sol - 2);
+  ctx.quadraticCurveTo(x + 12, sol - 3, boutX, boutY);
+  ctx.quadraticCurveTo(boutX + 0.5, boutY - 3.5, boutX - 2.5, boutY - 3.5);
+  ctx.stroke();
+
+  // Corps gris clair, taches gris foncé sur le dos, poitrail blanc
+  ctx.fillStyle = "#b8bcc2";
+  ctx.beginPath();
+  ctx.ellipse(x + 1, sol - 6, 6, 6.5, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#6e737a";
+  for (const [tx, ty, rx, ry] of [[3.5, -9, 2.2, 1.6], [5, -4.5, 1.6, 1.4], [1.5, -11.5, 1.4, 1]]) {
+    ctx.beginPath();
+    ctx.ellipse(x + tx, sol + ty, rx, ry, 0.3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.ellipse(x - 1.5, sol - 5, 3, 5, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Pattes blanches
+  ctx.fillRect(x - 4.5, sol - 3, 3.5, 3);
+  ctx.fillRect(x, sol - 3, 3.5, 3);
+  ctx.fillRect(x + 4, sol - 2, 3, 2);
+
+  // Tête, oreilles et tache foncée sur le front
+  ctx.fillStyle = "#b8bcc2";
+  ctx.beginPath();
+  ctx.arc(x - 1, sol - 15, 4.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(x - 5, sol - 17);
+  ctx.lineTo(x - 4.5, sol - 22);
+  ctx.lineTo(x - 2, sol - 19);
+  ctx.moveTo(x, sol - 19);
+  ctx.lineTo(x + 2.5, sol - 22);
+  ctx.lineTo(x + 3, sol - 17);
+  ctx.fill();
+  ctx.fillStyle = "#6e737a";
+  ctx.beginPath();
+  ctx.ellipse(x + 1, sol - 18, 2.2, 1.5, -0.4, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Museau blanc
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.ellipse(x - 1, sol - 12.5, 3, 2.2, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#e8a0a8";
+  ctx.fillRect(x - 1.5, sol - 14, 1.2, 1);
+
+  // Yeux qui clignent de temps en temps
+  ctx.fillStyle = "#2e3b2e";
+  const yeux = temps % 240 < 8 ? 0.5 : 1.5;
+  ctx.fillRect(x - 3.5, sol - 16, 1.2, yeux);
+  ctx.fillRect(x + 0.5, sol - 16, 1.2, yeux);
 }
 
 function tracerProfil(profil, x, base, decalage = 0) {
@@ -821,7 +1074,7 @@ function dessinerPlateforme(p) {
     ctx.fillStyle = "#6a6c76";
     for (let y = p.y + 30; y < p.y + p.h; y += 45) ctx.fillRect(p.x + 10 + Math.abs(y % 40), y, 30, 5);
     // De la neige sur les hauteurs, de la mousse plus bas
-    ctx.fillStyle = p.y < 100 ? "#f5f7fa" : "#8a9a5b";
+    ctx.fillStyle = p.y < LIMITE_NEIGE ? "#f5f7fa" : "#8a9a5b";
     ctx.fillRect(p.x, p.y, p.w, 10);
   }
 }
@@ -869,63 +1122,76 @@ function dessinerTetine(p) {
 function dessinerBouquetin(e) {
   const pas = Math.sin(e.anim) * 3;
 
-  // Pattes
+  // Pattes robustes
   ctx.fillStyle = "#4e3b2a";
-  ctx.fillRect(-13 + pas, -13, 3, 13);
-  ctx.fillRect(-8 - pas, -13, 3, 13);
-  ctx.fillRect(6 + pas, -13, 3, 13);
-  ctx.fillRect(11 - pas, -13, 3, 13);
+  ctx.fillRect(-15 + pas, -15, 4, 15);
+  ctx.fillRect(-9 - pas, -15, 4, 15);
+  ctx.fillRect(7 + pas, -15, 4, 15);
+  ctx.fillRect(13 - pas, -15, 4, 15);
 
-  // Corps, ventre clair et queue
+  // Corps trapu, ventre clair et queue
   ctx.fillStyle = "#8d6e4f";
   ctx.beginPath();
-  ctx.ellipse(0, -18, 17, 8, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, -22, 20, 10, 0, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillRect(-19, -23, 4, 5);
+  ctx.fillRect(-22, -28, 4, 6);
   ctx.fillStyle = "#c8ad8a";
   ctx.beginPath();
-  ctx.ellipse(0, -14, 12, 3.5, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, -16, 14, 4, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // Cou et tête
+  // Cou épais et grosse tête au museau allongé
   ctx.fillStyle = "#8d6e4f";
   ctx.beginPath();
-  ctx.moveTo(9, -24);
-  ctx.lineTo(15, -32);
-  ctx.lineTo(19, -28);
-  ctx.lineTo(14, -18);
+  ctx.moveTo(8, -30);
+  ctx.lineTo(16, -42);
+  ctx.lineTo(24, -36);
+  ctx.lineTo(17, -20);
   ctx.fill();
   ctx.beginPath();
-  ctx.ellipse(18, -29, 6, 4.5, 0.3, 0, Math.PI * 2);
+  ctx.ellipse(20, -38, 8.5, 7, 0.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(27, -34, 5, 4, 0.4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#6f5139";
+  ctx.beginPath();
+  ctx.ellipse(30, -33, 2, 1.5, 0.4, 0, Math.PI * 2);
   ctx.fill();
 
-  // Barbiche et œil
+  // Oreille, barbiche et œil
+  ctx.fillStyle = "#7a5d42";
+  ctx.beginPath();
+  ctx.ellipse(13, -41, 4, 2, -0.5, 0, Math.PI * 2);
+  ctx.fill();
   ctx.fillStyle = "#4e3b2a";
   ctx.beginPath();
-  ctx.moveTo(19, -26);
-  ctx.lineTo(18, -19);
-  ctx.lineTo(22, -25);
+  ctx.moveTo(24, -32);
+  ctx.lineTo(23, -22);
+  ctx.lineTo(28, -31);
   ctx.fill();
   ctx.fillStyle = "#111";
-  ctx.fillRect(18, -31, 2, 2);
-
-  // Grandes cornes recourbées vers l'arrière
-  ctx.strokeStyle = "#5a4632";
-  ctx.lineWidth = 3.5;
-  ctx.lineCap = "round";
   ctx.beginPath();
-  ctx.moveTo(15, -33);
-  ctx.quadraticCurveTo(10, -50, -2, -40);
+  ctx.arc(22, -40, 1.6, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Grandes cornes recourbées vers l'arrière, épaisses à la base
+  ctx.strokeStyle = "#5a4632";
+  ctx.lineCap = "round";
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.moveTo(18, -44);
+  ctx.quadraticCurveTo(13, -60, 1, -52);
   ctx.stroke();
   ctx.strokeStyle = "#7a6248";
-  ctx.lineWidth = 1;
-  for (let i = 0; i < 4; i++) {
-    const t = 0.2 + i * 0.2;
-    const cx = (1 - t) * (1 - t) * 15 + 2 * (1 - t) * t * 10 + t * t * -2;
-    const cy = (1 - t) * (1 - t) * -33 + 2 * (1 - t) * t * -50 + t * t * -40;
+  ctx.lineWidth = 1.2;
+  for (let i = 0; i < 5; i++) {
+    const t = 0.15 + i * 0.17;
+    const cx = (1 - t) * (1 - t) * 18 + 2 * (1 - t) * t * 13 + t * t * 1;
+    const cy = (1 - t) * (1 - t) * -44 + 2 * (1 - t) * t * -60 + t * t * -52;
     ctx.beginPath();
-    ctx.moveTo(cx - 2, cy - 1);
-    ctx.lineTo(cx + 2, cy + 1);
+    ctx.moveTo(cx - 2.5, cy - 1);
+    ctx.lineTo(cx + 2.5, cy + 1);
     ctx.stroke();
   }
 }
@@ -990,17 +1256,216 @@ function dessinerCastor(e) {
   ctx.fillRect(14, -19, 2, 2);
 }
 
+function dessinerLievre(e) {
+  const saut = Math.abs(Math.sin(e.anim * 0.8)) * 4;
+  ctx.translate(0, -saut);
+
+  // Grandes pattes arrière et pattes avant
+  ctx.fillStyle = "#8a6d4e";
+  ctx.beginPath();
+  ctx.ellipse(-8, -4, 8, 4, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillRect(6, -7, 3, 7);
+
+  // Corps et petite queue blanche
+  ctx.fillStyle = "#a88560";
+  ctx.beginPath();
+  ctx.ellipse(-2, -11, 13, 8, -0.15, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#f5f0e8";
+  ctx.beginPath();
+  ctx.arc(-15, -12, 3.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Tête et longues oreilles à bout noir
+  ctx.fillStyle = "#a88560";
+  ctx.beginPath();
+  ctx.ellipse(10, -17, 6, 5, 0.2, 0, Math.PI * 2);
+  ctx.fill();
+  for (const [ox, angle] of [[6, -0.35], [9, -0.15]]) {
+    ctx.save();
+    ctx.translate(ox, -21);
+    ctx.rotate(angle);
+    ctx.fillStyle = "#a88560";
+    ctx.beginPath();
+    ctx.ellipse(0, -6, 2.5, 7, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#2b2118";
+    ctx.beginPath();
+    ctx.ellipse(0, -11, 2, 2.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // Œil et nez
+  ctx.fillStyle = "#111";
+  ctx.fillRect(11, -19, 2, 2);
+  ctx.fillStyle = "#d48a8a";
+  ctx.fillRect(15, -16, 2, 2);
+}
+
+function dessinerRenard(e) {
+  const pas = Math.sin(e.anim) * 3;
+
+  // Grande queue touffue à bout blanc
+  ctx.fillStyle = "#e0702a";
+  ctx.beginPath();
+  ctx.ellipse(-21, -12, 10, 5, -0.4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#fafafa";
+  ctx.beginPath();
+  ctx.ellipse(-28, -8, 4, 3, -0.4, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Pattes noires
+  ctx.fillStyle = "#2b1d14";
+  ctx.fillRect(-9 + pas, -8, 3, 8);
+  ctx.fillRect(7 - pas, -8, 3, 8);
+
+  // Corps et poitrail blanc
+  ctx.fillStyle = "#e0702a";
+  ctx.beginPath();
+  ctx.ellipse(0, -13, 14, 6.5, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#fafafa";
+  ctx.beginPath();
+  ctx.ellipse(10, -11, 4, 4, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Tête triangulaire, oreilles pointues et museau blanc
+  ctx.fillStyle = "#e0702a";
+  ctx.beginPath();
+  ctx.moveTo(10, -24);
+  ctx.lineTo(13, -29);
+  ctx.lineTo(15, -23);
+  ctx.lineTo(18, -29);
+  ctx.lineTo(19, -21);
+  ctx.lineTo(25, -15);
+  ctx.lineTo(10, -14);
+  ctx.fill();
+  ctx.fillStyle = "#fafafa";
+  ctx.beginPath();
+  ctx.moveTo(14, -16);
+  ctx.lineTo(25, -15);
+  ctx.lineTo(16, -13);
+  ctx.fill();
+  ctx.fillStyle = "#111";
+  ctx.fillRect(24, -17, 2, 2);
+  ctx.fillRect(16, -21, 2, 2);
+}
+
+function dessinerChamois(e) {
+  const pas = Math.sin(e.anim) * 3;
+
+  // Pattes fines
+  ctx.fillStyle = "#3a2a1e";
+  ctx.fillRect(-12 + pas, -14, 3, 14);
+  ctx.fillRect(-6 - pas, -14, 3, 14);
+  ctx.fillRect(6 + pas, -14, 3, 14);
+  ctx.fillRect(11 - pas, -14, 3, 14);
+
+  // Corps fauve, raie dorsale sombre
+  ctx.fillStyle = "#9b6b3f";
+  ctx.beginPath();
+  ctx.ellipse(0, -18, 16, 7, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#5a3b22";
+  ctx.fillRect(-12, -25, 22, 2);
+  ctx.fillRect(-18, -21, 3, 4);
+
+  // Cou et tête claire avec bandeau sombre
+  ctx.fillStyle = "#9b6b3f";
+  ctx.beginPath();
+  ctx.moveTo(9, -22);
+  ctx.lineTo(14, -30);
+  ctx.lineTo(18, -27);
+  ctx.lineTo(14, -17);
+  ctx.fill();
+  ctx.fillStyle = "#efe3cf";
+  ctx.beginPath();
+  ctx.ellipse(17, -28, 5.5, 4, 0.3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "#2b1d14";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(14, -31);
+  ctx.lineTo(21, -26);
+  ctx.stroke();
+
+  // Petites cornes noires en crochet
+  ctx.lineWidth = 2;
+  ctx.lineCap = "round";
+  for (const ox of [14, 17]) {
+    ctx.beginPath();
+    ctx.moveTo(ox, -31);
+    ctx.lineTo(ox, -38);
+    ctx.quadraticCurveTo(ox - 1, -41, ox - 4, -38);
+    ctx.stroke();
+  }
+}
+
+function dessinerMarmotte(e) {
+  const pas = Math.sin(e.anim) * 2;
+
+  // Queue courte et sombre
+  ctx.fillStyle = "#4a3324";
+  ctx.beginPath();
+  ctx.ellipse(-14, -6, 5, 3, -0.3, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Pattes
+  ctx.fillStyle = "#3a2618";
+  ctx.fillRect(-7 + pas, -4, 5, 4);
+  ctx.fillRect(4 - pas, -4, 5, 4);
+
+  // Corps rond et ventre plus clair
+  ctx.fillStyle = "#8c6a48";
+  ctx.beginPath();
+  ctx.ellipse(-1, -11, 12, 10, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#c2a27a";
+  ctx.beginPath();
+  ctx.ellipse(3, -8, 6, 6, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Tête, petite oreille et museau clair
+  ctx.fillStyle = "#6f5238";
+  ctx.beginPath();
+  ctx.arc(9, -18, 6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(6, -23, 2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#d8c3a3";
+  ctx.beginPath();
+  ctx.ellipse(13, -16, 3.5, 3, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#111";
+  ctx.fillRect(10, -21, 2, 2);
+  ctx.fillRect(15, -17, 2, 2);
+  ctx.fillStyle = "#fafafa";
+  ctx.fillRect(13, -14, 2, 2);
+}
+
+const DESSINS_ENNEMIS = {
+  herisson: dessinerHerisson,
+  lievre: dessinerLievre,
+  renard: dessinerRenard,
+  castor: dessinerCastor,
+  chamois: dessinerChamois,
+  marmotte: dessinerMarmotte,
+  bouquetin: dessinerBouquetin,
+};
+
 function dessinerEnnemi(e) {
   ctx.save();
   ctx.translate(e.x + e.w / 2, e.y + e.h);
   ctx.scale(e.vx > 0 ? 1 : -1, 1);
+  DESSINS_ENNEMIS[e.type](e);
+  ctx.restore();
+}
 
-  if (e.type === "bouquetin" || e.type === "castor") {
-    (e.type === "castor" ? dessinerCastor : dessinerBouquetin)(e);
-    ctx.restore();
-    return;
-  }
-
+function dessinerHerisson(e) {
   const pas = Math.sin(e.anim) * 3;
   ctx.fillStyle = "#3b2a1a";
   ctx.fillRect(-10 + pas, -4, 5, 4);
@@ -1027,7 +1492,6 @@ function dessinerEnnemi(e) {
   ctx.fillStyle = "#111";
   ctx.fillRect(17, -10, 3, 3);
   ctx.fillRect(10, -12, 2, 2);
-  ctx.restore();
 }
 
 function dessinerDrapeau() {
@@ -1159,6 +1623,69 @@ function dessinerRoseaux() {
       ctx.stroke();
     }
   }
+}
+
+// Grenouille sur un nénuphar à l'entrée du lac, qui saute de temps en temps (simple décor)
+const GRENOUILLE_X = 2440;
+
+function dessinerGrenouille() {
+  const x = GRENOUILLE_X;
+  if (!visible(x - 20, 40)) return;
+  const surface = LAC.surface + Math.sin(x * 0.05 + temps * 0.08) * 3;
+
+  // Nénuphar avec son encoche
+  ctx.fillStyle = "#2e7d32";
+  ctx.beginPath();
+  ctx.ellipse(x, surface + 1, 16, 4.5, 0, 0.35, Math.PI * 2 - 0.35);
+  ctx.lineTo(x, surface + 1);
+  ctx.fill();
+  ctx.fillStyle = "#f8bbd0";
+  ctx.beginPath();
+  ctx.arc(x + 10, surface - 1, 2.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Un petit saut toutes les ~4 secondes
+  const cycle = temps % 240;
+  const saut = cycle < 30 ? Math.sin((cycle / 30) * Math.PI) * 22 : 0;
+  const y = surface - 1 - saut;
+
+  ctx.save();
+  ctx.translate(x - 2, y);
+  ctx.scale(-1, 1); // regarde vers la gauche, vers le joueur qui arrive
+
+  // Pattes arrière repliées (tendues pendant le saut)
+  ctx.fillStyle = "#43a047";
+  if (saut > 0) {
+    ctx.fillRect(-12, -2, 7, 2.5);
+  } else {
+    ctx.beginPath();
+    ctx.ellipse(-5, -2, 5, 3, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Corps, ventre clair et gorge qui palpite
+  ctx.fillStyle = "#66bb6a";
+  ctx.beginPath();
+  ctx.ellipse(0, -5, 7, 5, -0.15, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#dcedc8";
+  const gorge = 2 + Math.max(0, Math.sin(temps * 0.25)) * 1.2;
+  ctx.beginPath();
+  ctx.ellipse(5, -3, 2.5, gorge, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#43a047";
+  ctx.fillRect(3, -2, 2, 2);
+
+  // Gros yeux sur le dessus de la tête
+  for (const ox of [1, 5]) {
+    ctx.fillStyle = "#66bb6a";
+    ctx.beginPath();
+    ctx.arc(ox, -10, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#111";
+    ctx.fillRect(ox, -11, 1.5, 1.5);
+  }
+  ctx.restore();
 }
 
 function dessinerEau() {
@@ -1466,6 +1993,7 @@ function dessiner() {
     dessinerPersonnage(ctx, j.x, j.y, perso, j.direction, j.anim, !j.auSol);
   }
   dessinerEau();
+  dessinerGrenouille();
   ctx.restore();
 
   dessinerVies();

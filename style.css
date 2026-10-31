@@ -136,7 +136,8 @@ h2 {
   gap: 0.5rem;
 }
 
-.identite input {
+.identite input,
+#form-cle input {
   width: 10rem;
   font-size: 1rem;
   padding: 0.4rem 0.7rem;
@@ -146,7 +147,8 @@ h2 {
   color: var(--texte);
 }
 
-.identite input:focus {
+.identite input:focus,
+#form-cle input:focus {
   outline: none;
   border-color: var(--accent);
 }

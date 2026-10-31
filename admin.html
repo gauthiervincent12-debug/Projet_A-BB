@@ -16,6 +16,15 @@
   </header>
 
   <main class="backoffice">
+    <section id="section-en-ligne" hidden>
+      <h2>Résultats en ligne</h2>
+      <form id="form-cle" class="actions">
+        <input id="cle-admin" type="password" placeholder="Mot de passe" autocomplete="current-password" aria-label="Mot de passe">
+        <button type="submit">Charger tous les joueurs</button>
+      </form>
+      <p id="etat-en-ligne" class="note"></p>
+    </section>
+
     <section>
       <h2>Résumé</h2>
       <div class="statistiques">
@@ -50,10 +59,11 @@
         <button id="bouton-exporter">Exporter (CSV / Excel)</button>
         <button id="bouton-effacer" class="bouton-secondaire">Tout effacer</button>
       </div>
-      <p class="note">Les données affichées sont celles enregistrées dans ce navigateur.</p>
+      <p id="note-source" class="note">Les données affichées sont celles enregistrées dans ce navigateur.</p>
     </section>
   </main>
 
+  <script src="config.js"></script>
   <script src="admin.js"></script>
 </body>
 </html>

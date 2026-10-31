@@ -1,17 +1,66 @@
-// Backoffice du Projet A-BB : consulte les parties enregistrées par le jeu
+// Backoffice du Projet A-BB : consulte les parties enregistrées par le jeu,
+// soit dans ce navigateur, soit dans la feuille Google Sheets (tous les joueurs)
 
 const CLE_SCORES = "abb-scores";
+const CLE_MOT_DE_PASSE = "abb-cle-admin";
 const NOMS_DIFFICULTE = { facile: "Facile", moyen: "Moyen", difficile: "Difficile" };
 const NOMS_REPONSE = { fille: "👧 Fille", "garçon": "👦 Garçon" };
 
 const listeScores = document.getElementById("liste-scores");
 const aucunScore = document.getElementById("aucun-score");
+const champCle = document.getElementById("cle-admin");
+const etatEnLigne = document.getElementById("etat-en-ligne");
+const noteSource = document.getElementById("note-source");
+const boutonEffacer = document.getElementById("bouton-effacer");
 
-function lireScores() {
+const enLigneDisponible = typeof URL_RESULTATS !== "undefined" && URL_RESULTATS !== "";
+let scoresEnLigne = null; // null tant que les résultats en ligne ne sont pas chargés
+
+function lireScoresLocaux() {
   try {
     return JSON.parse(localStorage.getItem(CLE_SCORES)) ?? [];
   } catch {
     return [];
+  }
+}
+
+const lireScores = () => scoresEnLigne ?? lireScoresLocaux();
+
+// La feuille Google Sheets renvoie tout en texte : on remet les bons types
+function depuisFeuille(p) {
+  return {
+    ...p,
+    score: Number(p.score) || 0,
+    temps: Number(p.temps) || 0,
+    gagne: String(p.gagne).toUpperCase() === "TRUE",
+    reponse: p.reponse || null,
+  };
+}
+
+async function chargerEnLigne() {
+  const cle = champCle.value.trim();
+  if (!cle) return;
+  etatEnLigne.textContent = "Chargement…";
+  try {
+    const reponse = await fetch(`${URL_RESULTATS}?cle=${encodeURIComponent(cle)}`);
+    const donnees = await reponse.json();
+    if (donnees.erreur) {
+      etatEnLigne.textContent = donnees.erreur;
+      return;
+    }
+    scoresEnLigne = donnees.map(depuisFeuille);
+    try {
+      localStorage.setItem(CLE_MOT_DE_PASSE, cle);
+    } catch {
+      // Stockage indisponible : il faudra ressaisir le mot de passe
+    }
+    etatEnLigne.textContent = `${scoresEnLigne.length} partie(s) chargée(s) — ${new Date().toLocaleTimeString("fr-FR")}`;
+    noteSource.textContent =
+      "Données de tous les joueurs (feuille Google Sheets). Pour supprimer des parties, effacer les lignes dans la feuille.";
+    boutonEffacer.hidden = true;
+    afficher();
+  } catch {
+    etatEnLigne.textContent = "Impossible de joindre la feuille Google Sheets (adresse dans config.js ?).";
   }
 }
 
@@ -28,7 +77,7 @@ function formaterDate(iso) {
 // Une ligne par partie, la plus récente en premier
 function lignes() {
   return lireScores()
-    .sort((a, b) => b.date.localeCompare(a.date))
+    .sort((a, b) => String(b.date).localeCompare(String(a.date)))
     .map((p) => ({
       date: formaterDate(p.date),
       prenom: p.prenom,
@@ -80,8 +129,8 @@ function exporter() {
 
 document.getElementById("bouton-exporter").addEventListener("click", exporter);
 
-document.getElementById("bouton-effacer").addEventListener("click", () => {
-  if (confirm("Effacer toutes les parties enregistrées ?")) {
+boutonEffacer.addEventListener("click", () => {
+  if (confirm("Effacer toutes les parties enregistrées dans ce navigateur ?")) {
     try {
       localStorage.removeItem(CLE_SCORES);
     } catch {
@@ -93,7 +142,23 @@ document.getElementById("bouton-effacer").addEventListener("click", () => {
 
 // Se met à jour si une partie se termine dans un autre onglet
 window.addEventListener("storage", (e) => {
-  if (e.key === CLE_SCORES) afficher();
+  if (e.key === CLE_SCORES && !scoresEnLigne) afficher();
+});
+
+document.getElementById("form-cle").addEventListener("submit", (e) => {
+  e.preventDefault();
+  chargerEnLigne();
 });
 
 afficher();
+
+// Résultats en ligne : chargés automatiquement si le mot de passe est déjà connu
+if (enLigneDisponible) {
+  document.getElementById("section-en-ligne").hidden = false;
+  try {
+    champCle.value = localStorage.getItem(CLE_MOT_DE_PASSE) ?? "";
+  } catch {
+    // Stockage indisponible
+  }
+  chargerEnLigne();
+}
