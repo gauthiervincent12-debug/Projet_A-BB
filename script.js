@@ -97,10 +97,11 @@ function planche(x, y, w, mouvement) {
   return p;
 }
 
-function ennemi(x, sol, min, max, vitesse) {
-  // Hérissons dans les collines, bouquetins (plus grands) dans la montagne
-  const type = x >= LAC.fin ? "bouquetin" : "herisson";
-  const [w, h] = type === "bouquetin" ? [38, 34] : [34, 24];
+const TAILLES_ENNEMIS = { herisson: [34, 24], bouquetin: [38, 34], castor: [40, 24] };
+
+function ennemi(x, sol, min, max, vitesse, type = x >= LAC.fin ? "bouquetin" : "herisson") {
+  // Hérissons dans les collines, bouquetins (plus grands) dans la montagne, castor au lac
+  const [w, h] = TAILLES_ENNEMIS[type];
   return { type, x, y: sol - h, w, h, vx: -vitesse, min, max, mort: false, anim: 0 };
 }
 
@@ -185,6 +186,14 @@ function creerNiveau(difficulte) {
   }
   const vitesse = DIFFICULTES[difficulte].vitesseEnnemis;
   const ennemis = positions.map(([x, sol, min, max]) => ennemi(x, sol, min, max, vitesse));
+
+  // Castor sur le dernier ponton du lac : il suit le ponton s'il bouge
+  const ponton = plateformes
+    .filter((p) => p.type === "bois" && p.x > LAC.debut && p.x < LAC.fin)
+    .reduce((a, b) => (b.x > a.x ? b : a));
+  const castor = ennemi(ponton.x + ponton.w - 45, ponton.y, ponton.x, ponton.x + ponton.w, vitesse * 0.7, "castor");
+  castor.support = ponton;
+  ennemis.push(castor);
 
   const lignesPieces = [
     [200, 360, 5], [505, 260, 3], [720, 200, 3], [1020, 330, 3], [1325, 250, 3],
@@ -473,6 +482,13 @@ function mettreAJour(dt) {
   // Ennemis
   for (const e of niveau.ennemis) {
     if (e.mort) continue;
+    if (e.support) {
+      const { dx, dy } = e.support;
+      e.x += dx;
+      e.min += dx;
+      e.max += dx;
+      e.y += dy;
+    }
     e.x += e.vx * dt;
     e.anim += 0.2 * dt;
     if (e.x < e.min) {
@@ -914,13 +930,73 @@ function dessinerBouquetin(e) {
   }
 }
 
+function dessinerCastor(e) {
+  const pas = Math.sin(e.anim) * 2.5;
+
+  // Queue plate écailleuse, qui bat doucement
+  ctx.save();
+  ctx.translate(-14, -7);
+  ctx.rotate(-0.25 + Math.sin(e.anim * 0.5) * 0.12);
+  ctx.fillStyle = "#3e2a1c";
+  ctx.beginPath();
+  ctx.ellipse(-9, 0, 11, 4.5, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "#5a4030";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (const cx of [-15, -10, -5]) {
+    ctx.moveTo(cx, -3);
+    ctx.lineTo(cx, 3);
+  }
+  ctx.stroke();
+  ctx.restore();
+
+  // Pattes
+  ctx.fillStyle = "#4a3222";
+  ctx.fillRect(-10 + pas, -5, 6, 5);
+  ctx.fillRect(5 - pas, -5, 6, 5);
+
+  // Corps dodu et ventre clair
+  ctx.fillStyle = "#7b5034";
+  ctx.beginPath();
+  ctx.ellipse(-1, -11, 16, 10, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#a47552";
+  ctx.beginPath();
+  ctx.ellipse(1, -6, 10, 4, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Tête, oreille et museau
+  ctx.fillStyle = "#7b5034";
+  ctx.beginPath();
+  ctx.arc(13, -15, 7.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(9, -22, 2.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#a47552";
+  ctx.beginPath();
+  ctx.ellipse(19, -13, 4, 3.5, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Grandes dents orange, nez et œil
+  ctx.fillStyle = "#ffb74d";
+  ctx.fillRect(18, -10, 2, 4);
+  ctx.fillRect(20, -10, 2, 4);
+  ctx.fillStyle = "#111";
+  ctx.beginPath();
+  ctx.arc(22, -15, 1.8, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillRect(14, -19, 2, 2);
+}
+
 function dessinerEnnemi(e) {
   ctx.save();
   ctx.translate(e.x + e.w / 2, e.y + e.h);
   ctx.scale(e.vx > 0 ? 1 : -1, 1);
 
-  if (e.type === "bouquetin") {
-    dessinerBouquetin(e);
+  if (e.type === "bouquetin" || e.type === "castor") {
+    (e.type === "castor" ? dessinerCastor : dessinerBouquetin)(e);
     ctx.restore();
     return;
   }
@@ -1034,6 +1110,55 @@ function dessinerPoussette() {
   ctx.textAlign = "center";
   ctx.textBaseline = "alphabetic";
   ctx.fillText("?", x + 30, y - 94 + Math.sin(temps * 0.08) * 4);
+}
+
+// Roseaux vers la fin du lac : [x, hauteur, massette]
+const ROSEAUX = [
+  [3560, 46, false], [3572, 62, true], [3584, 40, false],
+  [3712, 58, true], [3724, 72, true], [3735, 44, false],
+  [3778, 50, false], [3790, 68, true], [3801, 78, true], [3812, 55, false],
+  [3828, 64, true], [3838, 48, false],
+];
+
+function dessinerRoseaux() {
+  if (!visible(3540, 320)) return;
+  const base = LAC.surface + 12;
+  ctx.lineCap = "round";
+  for (const [x, hauteur, massette] of ROSEAUX) {
+    const vent = Math.sin(temps * 0.04 + x * 0.3) * 4;
+    const hautX = x + vent;
+    const hautY = base - hauteur;
+
+    // Tige
+    ctx.strokeStyle = "#6b8e23";
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(x, base);
+    ctx.quadraticCurveTo(x, base - hauteur / 2, hautX, hautY);
+    ctx.stroke();
+
+    // Feuille fine qui s'écarte
+    ctx.strokeStyle = "#7da832";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x, base - 6);
+    ctx.quadraticCurveTo(x + 8, base - hauteur * 0.5, x + 12 + vent, base - hauteur * 0.7);
+    ctx.stroke();
+
+    // Massette brune au sommet
+    if (massette) {
+      ctx.fillStyle = "#6d4c2f";
+      ctx.beginPath();
+      ctx.ellipse(hautX, hautY + 8, 3.5, 8, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#6b8e23";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(hautX, hautY);
+      ctx.lineTo(hautX, hautY - 6);
+      ctx.stroke();
+    }
+  }
 }
 
 function dessinerEau() {
@@ -1327,6 +1452,7 @@ function dessiner() {
 
   ctx.save();
   ctx.translate(-Math.round(camX), -Math.round(camY));
+  dessinerRoseaux();
   for (const p of niveau.plateformes) if (visible(p.x, p.w)) dessinerPlateforme(p);
   POINTS_REPRISE.forEach((x, i) => {
     if (i > 0 && visible(x, 30)) dessinerBalise(x, i <= pointReprise);
