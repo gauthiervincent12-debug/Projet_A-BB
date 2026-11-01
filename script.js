@@ -24,11 +24,6 @@ const questionTexte = document.getElementById("question-texte");
 const modalePhoto = document.getElementById("modale-photo");
 const photoTitre = document.getElementById("photo-titre");
 const boutonFermerPhoto = document.getElementById("bouton-fermer-photo");
-const ecranPronostic = document.getElementById("ecran-pronostic");
-const champNaissance = document.getElementById("naissance");
-const champPoids = document.getElementById("poids");
-const champTaille = document.getElementById("taille");
-const erreurPronostic = document.getElementById("erreur-pronostic");
 const sectionJeu = document.getElementById("jeu");
 const boutonPleinEcran = document.getElementById("bouton-plein-ecran");
 
@@ -399,9 +394,6 @@ function finDePartie(gagne) {
     personnage: perso,
     gagne,
     reponse: null,
-    naissance: null,
-    poids_kg: null,
-    taille_cm: null,
     date: new Date().toISOString(),
   };
   sauverScores([...lireScores(), partieActuelle]);
@@ -418,46 +410,12 @@ function finDePartie(gagne) {
   }
 }
 
-function majPartie() {
-  sauverScores(lireScores().map((p) => (p.id === partieActuelle.id ? partieActuelle : p)));
-  envoyerPartie(partieActuelle);
-}
-
 function repondre(reponse) {
   partieActuelle.reponse = reponse;
-  majPartie();
+  sauverScores(lireScores().map((p) => (p.id === partieActuelle.id ? partieActuelle : p)));
+  envoyerPartie(partieActuelle);
   ecranQuestion.classList.add("cache");
-  erreurPronostic.classList.add("cache");
-  ecranPronostic.classList.remove("cache");
-  champNaissance.focus();
-}
-
-// Nombre saisi à la française (virgule acceptée), ou NaN
-const lireNombre = (champ) => Number(champ.value.trim().replace(",", "."));
-
-function validerPronostic(e) {
-  e.preventDefault();
-  const naissance = champNaissance.value;
-  const poids = lireNombre(champPoids);
-  const taille = lireNombre(champTaille);
-  let erreur = "";
-  if (!naissance) erreur = "Choisis une date de naissance.";
-  else if (!(poids >= 1 && poids <= 7)) erreur = "Le poids doit être en kilos, entre 1 et 7 (ex. 3,4).";
-  else if (!(taille >= 30 && taille <= 65)) erreur = "La taille doit être en centimètres, entre 30 et 65 (ex. 50).";
-  if (erreur) {
-    erreurPronostic.textContent = erreur;
-    erreurPronostic.classList.remove("cache");
-    return;
-  }
-
-  const [annee, mois, jour] = naissance.split("-");
-  Object.assign(partieActuelle, { naissance: `${jour}/${mois}/${annee}`, poids_kg: poids, taille_cm: taille });
-  majPartie();
-  ecranPronostic.classList.add("cache");
-  const sexe = partieActuelle.reponse === "fille" ? "une fille 👧" : "un garçon 👦";
-  photoTitre.textContent =
-    `${partieActuelle.prenom}, tu as répondu : ${sexe}, né(e) le ${partieActuelle.naissance}, ` +
-    `${String(poids).replace(".", ",")} kg et ${String(taille).replace(".", ",")} cm !`;
+  photoTitre.textContent = `${partieActuelle.prenom}, tu as répondu : ${reponse === "fille" ? "une fille 👧" : "un garçon 👦"} !`;
   modalePhoto.classList.remove("cache");
   boutonFermerPhoto.focus();
 }
@@ -2238,8 +2196,6 @@ document.querySelectorAll(".carte-perso").forEach((carte) => {
 document.querySelectorAll("[data-reponse]").forEach((bouton) => {
   bouton.addEventListener("click", () => repondre(bouton.dataset.reponse));
 });
-
-ecranPronostic.addEventListener("submit", validerPronostic);
 
 boutonFermerPhoto.addEventListener("click", fermerPhoto);
 modalePhoto.addEventListener("click", (e) => {

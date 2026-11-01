@@ -73,7 +73,6 @@ function formaterTemps(temps) {
   return `${Math.floor(secondes / 60)}:${String(secondes % 60).padStart(2, "0")}:${String(millis % 1000).padStart(3, "0")}`;
 }
 
-const enFrancais = (nombre) => (nombre === null || nombre === undefined || nombre === "" ? "—" : String(nombre).replace(".", ","));
 
 function formaterDate(iso) {
   const date = new Date(iso);
@@ -94,9 +93,6 @@ function lignes() {
       personnage: NOMS_PERSONNAGE[p.personnage] ?? "—",
       resultat: p.gagne ? "Arrivé" : "Perdu",
       reponse: NOMS_REPONSE[p.reponse] ?? "—",
-      naissance: p.naissance || "—",
-      poids: enFrancais(p.poids_kg),
-      taille: enFrancais(p.taille_cm),
     }));
 }
 
@@ -115,7 +111,7 @@ function afficher() {
       for (const [cle, valeur] of Object.entries(ligne)) {
         const td = document.createElement("td");
         td.textContent = valeur;
-        if (["score", "temps", "poids", "taille"].includes(cle)) td.className = "nombre";
+        if (["score", "temps"].includes(cle)) td.className = "nombre";
         tr.append(td);
       }
       return tr;
@@ -127,7 +123,7 @@ function afficher() {
 function exporter() {
   const entetes = [
     "Date", "Prénom", "Nom", "Score", "Temps", "Difficulté", "Personnage", "Résultat",
-    "Fille ou garçon ?", "Date de naissance", "Poids (kg)", "Taille (cm)",
+    "Fille ou garçon ?",
   ];
   const echapper = (v) => `"${String(v).replace(/"/g, '""')}"`;
   const contenu = [entetes, ...lignes().map((l) => Object.values(l))]

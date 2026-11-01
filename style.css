@@ -425,53 +425,6 @@ button:hover {
     font-size: 1rem;
     padding: 0.5rem 1.2rem;
   }
-
-  .champs-pronostic {
-    gap: 0.3rem 0.5rem;
-  }
-
-  .champs-pronostic label {
-    font-size: 0.75rem;
-  }
-
-  .champs-pronostic input {
-    width: 7rem;
-    font-size: 0.85rem;
-    padding: 0.2rem 0.4rem;
-  }
-}
-
-/* ---------- Pronostics (date de naissance, poids, taille) ---------- */
-
-.champs-pronostic {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 0.6rem 1rem;
-}
-
-.champs-pronostic label {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.2rem;
-  font-size: 0.9rem;
-}
-
-.champs-pronostic input {
-  width: 9.5rem;
-  font-size: 1rem;
-  padding: 0.4rem 0.6rem;
-  border-radius: 8px;
-  border: 2px solid var(--accent-2);
-  background: var(--carte);
-  color: var(--texte);
-  color-scheme: dark;
-}
-
-.champs-pronostic input:focus {
-  outline: none;
-  border-color: var(--accent);
 }
 
 /* ---------- Plein écran ---------- */
