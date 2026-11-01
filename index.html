@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Annonce du sexe de bébé — L'Ascension</title>
-  <link rel="stylesheet" href="style.css?v=202611011836">
+  <link rel="stylesheet" href="style.css?v=202611011949">
 </head>
 <body>
   <header>
@@ -26,7 +26,8 @@
         <span>Difficulté : <strong id="difficulte">Moyen</strong></span>
         <span>Zone : <strong id="zone">—</strong></span>
         <span>Record : <strong id="record">0</strong></span>
-        <button id="bouton-plein-ecran" class="bouton-plein-ecran" aria-label="Passer en plein écran">⛶ Plein écran</button>
+        <button id="bouton-musique" class="bouton-hud" aria-label="Couper la musique">🔊 Musique</button>
+        <button id="bouton-plein-ecran" class="bouton-hud" aria-label="Passer en plein écran">⛶ Plein écran</button>
       </div>
 
       <div class="zone-jeu">
@@ -77,16 +78,21 @@
       </div>
 
       <div class="controles-tactiles">
-        <button data-tactile="ArrowLeft" aria-label="Gauche">◀</button>
-        <button data-tactile="ArrowRight" aria-label="Droite">▶</button>
-        <button data-tactile="Space" aria-label="Sauter">⤒</button>
+        <div class="groupe-tactile groupe-deplacement">
+          <button data-tactile="ArrowLeft" aria-label="Gauche">◀</button>
+          <button data-tactile="ArrowRight" aria-label="Droite">▶</button>
+        </div>
+        <div class="groupe-tactile groupe-actions">
+          <button id="bouton-tir" class="bouton-tir cache" data-tactile="KeyX" aria-label="Tirer du lait">🍼</button>
+          <button data-tactile="Space" aria-label="Sauter">⤒</button>
+        </div>
       </div>
 
       <div id="modale-photo" class="modale cache" role="dialog" aria-modal="true" aria-labelledby="photo-titre">
         <div class="modale-contenu">
           <h3 id="photo-titre"></h3>
           <!-- Vidéo de l'annonce : déposer le fichier videos/annonce.mp4 -->
-          <video id="video-annonce" src="videos/annonce.mp4?v=202611011836" controls playsinline preload="none"></video>
+          <video id="video-annonce" src="videos/annonce.mp4?v=202611011949" controls playsinline preload="none"></video>
           <p id="video-absente" class="video-absente cache">🎬 La vidéo arrive bientôt…</p>
           <button id="bouton-fermer-photo">Rejouer</button>
         </div>
@@ -99,22 +105,25 @@
         <li>🌄 Traverse les <strong>collines</strong>, franchis le <strong>lac</strong> sur les pontons, puis gravis les <strong>montagnes</strong> : passe le drapeau du sommet et rejoins la poussette !</li>
         <li>📋 Ton score, ton temps, ton personnage et ta réponse sont enregistrés avec ton prénom et ton nom.</li>
         <li>🍼 Tétine : +10 points · Animal écrasé en sautant dessus : +50 points (🐇 lièvre et 🦊 renard dans les collines, 🦫 castor au lac, chamois et marmotte dans l'herbe de la montagne, 🐐 bouquetin dans la neige)</li>
+        <li>🍼 À la fin des collines, un biberon flotte en hauteur : attrape-le pour tirer du lait sur les animaux (touche <kbd>X</kbd>, ou le bouton 🍼 sur mobile). Même les hérissons y passent !</li>
         <li>🦔 Attention aux hérissons : ils piquent ! Leur sauter dessus fait perdre une vie, il faut les éviter.</li>
         <li>💧 Tomber dans l'eau ou dans un ravin, ou toucher un animal de côté : −1 vie</li>
         <li>🚩 Les balises vertes sont des points de reprise.</li>
         <li>❤️ Tu commences avec 4 vies, affichées en haut à gauche de l'écran de jeu.</li>
         <li>🎚️ Facile : sol continu, pontons fixes, peu d'ennemis · Moyen : niveau normal · Difficile : plus d'ennemis, plus rapides, et des pontons mobiles presque partout.</li>
         <li>Bonus à l'arrivée : +100 points par vie restante.</li>
-        <li>Contrôles : flèches ← → (ou Q / D), saut avec Espace / ↑ / Z, <kbd>P</kbd> pour la pause. Boutons à l'écran sur mobile, et bouton <strong>⛶ Plein écran</strong> pour jouer en grand.</li>
+        <li>Contrôles : flèches ← → (ou Q / D), saut avec Espace / ↑ / Z, <kbd>P</kbd> pour la pause. Boutons à l'écran sur mobile, bouton <strong>⛶ Plein écran</strong> pour jouer en grand et <strong>🔊 Musique</strong> pour couper le son.</li>
+        <li>🎵 Chaque difficulté a sa propre musique, dans le style des consoles 32 bits.</li>
       </ul>
     </section>
   </main>
 
   <footer>
-    <p>Développé par Céline et Vincent avec leur pote Claude Code 😉</p>
+    <p>Développé par Céline et Vincent avec leur pote l'IA Claude Code 😉</p>
   </footer>
 
-  <script src="config.js?v=202611011836"></script>
-  <script src="script.js?v=202611011836"></script>
+  <script src="config.js?v=202611011949"></script>
+  <script src="musique.js?v=202611011949"></script>
+  <script src="script.js?v=202611011949"></script>
 </body>
 </html>

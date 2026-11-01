@@ -28,6 +28,8 @@ const videoAnnonce = document.getElementById("video-annonce");
 const videoAbsente = document.getElementById("video-absente");
 const sectionJeu = document.getElementById("jeu");
 const boutonPleinEcran = document.getElementById("bouton-plein-ecran");
+const boutonMusique = document.getElementById("bouton-musique");
+const boutonTir = document.getElementById("bouton-tir");
 
 // Réglages
 const GRAVITE = 0.6;
@@ -41,6 +43,9 @@ const DRAPEAU = { x: 6100, y: -150 };
 const POUSSETTE = { x: 6330, y: -150 };
 const POINTS_REPRISE = [80, 2300, 3950];
 const VIES_DEPART = 4;
+// Biberon bonus, en hauteur à la fin des collines : on l'attrape en sautant depuis la dernière planche
+const BIBERON = { x: 2230, y: 166 };
+const TIR = { vitesse: 9, portee: 55, recharge: 18 };
 const LIMITE_NEIGE = 100; // Les rochers plus hauts que ça sont enneigés
 
 const DIFFICULTES = {
@@ -151,8 +156,8 @@ function creerNiveau(difficulte) {
 
   // Le Lac
   if (facile) {
-    // Pontons fixes et rapprochés
-    for (let i = 0; i < 8; i++) plateformes.push(planche(2470 + i * 165, i % 2 ? 360 : 380, 110));
+    // 4 grands pontons fixes : deux fois moins de trous d'eau qu'avec de petits pontons
+    for (let i = 0; i < 4; i++) plateformes.push(planche(2470 + i * 330, i % 2 ? 360 : 380, 275));
   } else if (difficile) {
     plateformes.push(
       planche(2500, 380, 90),
@@ -190,11 +195,10 @@ function creerNiveau(difficulte) {
   // Ennemis : [x, sol, limite gauche, limite droite]
   const positions = [
     [650, SOL, 300, 950],
-    [1450, SOL, 1150, 1650],
     [4050, SOL, 3900, 4290],
   ];
   if (!facile) {
-    positions.push([2150, SOL, 1850, 2350], [4830, 190, 4800, 4950], [5900, -150, 5800, 6060]);
+    positions.push([1450, SOL, 1150, 1650], [2150, SOL, 1850, 2350], [4830, 190, 4800, 4950], [5900, -150, 5800, 6060]);
   }
   if (difficile) {
     positions.push(
@@ -228,7 +232,7 @@ function creerNiveau(difficulte) {
     for (let i = 0; i < n; i++) pieces.push({ x: x + i * 34, y, prise: false });
   }
 
-  return { plateformes, ennemis, pieces };
+  return { plateformes, ennemis, pieces, biberon: { ...BIBERON, pris: false }, tirs: [] };
 }
 
 function creerJoueur() {
@@ -236,6 +240,7 @@ function creerJoueur() {
     x: POINTS_REPRISE[0], y: SOL - 44, w: 26, h: 44,
     vx: 0, vy: 0, auSol: false, support: null,
     direction: 1, anim: 0, horsSol: 0, invulnerable: 0,
+    biberon: false, recharge: 0,
   };
 }
 
@@ -347,12 +352,14 @@ function demarrer(choix) {
   tamponSaut = 0;
   majHud();
   ecranSelection.classList.add("cache");
+  boutonTir.classList.add("cache");
   ecranMessage.classList.add("cache");
   document.activeElement.blur();
   enCours = true;
   enPause = false;
   dernierTemps = performance.now();
   requestAnimationFrame(boucle);
+  Musique.jouer(difficulte);
 }
 
 function afficherMessage(titre, texte, bouton) {
@@ -377,6 +384,7 @@ function perdreVie() {
 
 function finDePartie(gagne) {
   enCours = false;
+  Musique.arreter();
   if (gagne) score += vies * 100;
   const nouveauRecord = score > record;
   if (nouveauRecord) {
@@ -458,6 +466,7 @@ function fermerPhoto() {
 function basculerPause() {
   if (!enCours) return;
   enPause = !enPause;
+  Musique.suspendre(enPause);
   if (enPause) {
     afficherMessage("Pause", "Appuie sur P pour reprendre", "Reprendre");
   } else {
@@ -480,6 +489,7 @@ const chevauche = (a, b) =>
 const gauche = () => touches.ArrowLeft || touches.KeyA;
 const droite = () => touches.ArrowRight || touches.KeyD;
 const sautMaintenu = () => touches.Space || touches.ArrowUp || touches.KeyW;
+const tirMaintenu = () => touches.KeyX || touches.KeyF;
 
 function mettreAJour(dt) {
   temps += dt;
@@ -580,6 +590,40 @@ function mettreAJour(dt) {
       return perdreVie();
     }
   }
+
+  // Biberon : une fois attrapé, on tire du lait (en continu tant que la touche est appuyée)
+  const b = niveau.biberon;
+  if (!b.pris && j.x < b.x + 9 && j.x + j.w > b.x - 9 && j.y < b.y + 14 && j.y + j.h > b.y - 14) {
+    b.pris = true;
+    j.biberon = true;
+    ajouterScore(20);
+    banniere = { texte: "🍼 Biberon : tire du lait (X) !", duree: 200 };
+    boutonTir.classList.remove("cache");
+  }
+  if (j.biberon) {
+    j.recharge -= dt;
+    if (tirMaintenu() && j.recharge <= 0) {
+      niveau.tirs.push({
+        x: j.x + j.w / 2 + j.direction * BOUT_BIBERON - (j.direction > 0 ? 0 : 10), y: j.y + 18, w: 10, h: 7,
+        vx: TIR.vitesse * j.direction, vie: TIR.portee,
+      });
+      j.recharge = TIR.recharge;
+    }
+  }
+
+  // Jets de lait : ils éliminent le premier animal touché (même les hérissons) et s'arrêtent sur les obstacles
+  for (const t of niveau.tirs) {
+    t.x += t.vx * dt;
+    t.vie -= dt;
+    if (niveau.plateformes.some((p) => chevauche(t, p))) t.vie = 0;
+    const cible = niveau.ennemis.find((e) => !e.mort && chevauche(t, e));
+    if (cible && t.vie > 0) {
+      cible.mort = true;
+      t.vie = 0;
+      ajouterScore(50);
+    }
+  }
+  niveau.tirs = niveau.tirs.filter((t) => t.vie > 0);
 
   // Pièces
   for (const p of niveau.pieces) {
@@ -1237,6 +1281,50 @@ function dessinerBalise(x, active) {
 }
 
 // Tétine pour bébé : tétine, collerette et anneau, qui flotte doucement
+// Biberon : tétine, bague bleue et lait ; (x, y) = son centre. Dans le niveau, il flotte et brille.
+function dessinerBiberon(x, y, dansLeNiveau) {
+  ctx.save();
+  ctx.translate(x, y + (dansLeNiveau ? Math.sin(temps * 0.07) * 4 : 0));
+  if (dansLeNiveau) {
+    const halo = ctx.createRadialGradient(0, 0, 2, 0, 0, 26);
+    halo.addColorStop(0, "rgba(255, 245, 200, 0.75)");
+    halo.addColorStop(1, "rgba(255, 245, 200, 0)");
+    ctx.fillStyle = halo;
+    ctx.beginPath();
+    ctx.arc(0, 0, 26, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Tétine et bague
+  ctx.fillStyle = "#f3c892";
+  ctx.beginPath();
+  ctx.ellipse(0, -11, 3, 4, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#4fc3f7";
+  ctx.fillRect(-6, -8, 12, 4);
+
+  // Flacon transparent rempli de lait, avec ses graduations
+  ctx.fillStyle = "rgba(255, 255, 255, 0.55)";
+  ctx.fillRect(-5.5, -4, 11, 17);
+  ctx.fillStyle = "#fffdf5";
+  ctx.fillRect(-5.5, 1, 11, 12);
+  ctx.fillStyle = "#90a4ae";
+  for (const gy of [1, 5, 9]) ctx.fillRect(2, gy, 3, 1);
+  ctx.restore();
+}
+
+// Jet de lait : goutte blanche étirée dans le sens du tir
+function dessinerTir(t) {
+  ctx.fillStyle = "#fffdf5";
+  ctx.beginPath();
+  ctx.ellipse(t.x + t.w / 2, t.y + t.h / 2, t.w / 2 + 2, t.h / 2, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "rgba(255, 253, 245, 0.5)";
+  ctx.beginPath();
+  ctx.ellipse(t.x + t.w / 2 - Math.sign(t.vx) * 9, t.y + t.h / 2, 5, 2.5, 0, 0, Math.PI * 2);
+  ctx.fill();
+}
+
 function dessinerTetine(p) {
   const x = p.x;
   const y = p.y + Math.sin(temps * 0.08 + p.x) * 2;
@@ -1852,19 +1940,49 @@ function dessinerEau() {
 }
 
 // Personnage dans une boîte de 26 × 44 dont (x, y) est le coin haut-gauche
-function dessinerPersonnage(c, x, y, type, direction, anim, enAir) {
+function dessinerPersonnage(c, x, y, type, direction, anim, enAir, biberon = false) {
   const pas = enAir ? 4 : Math.sin(anim) * 5;
 
   c.save();
   c.translate(x + 13, y);
   c.scale(direction, 1);
-  if (type === "femme") dessinerFemmeEnceinte(c, pas, anim, enAir);
-  else dessinerTraileur(c, pas, enAir);
+  if (type === "femme") dessinerFemmeEnceinte(c, pas, anim, enAir, biberon);
+  else dessinerTraileur(c, pas, enAir, biberon);
   c.restore();
 }
 
+// Bras tendu vers l'avant qui tient le biberon, tétine devant (repère du personnage, regard à droite).
+// La tétine arrive à BOUT_BIBERON pixels devant le centre du personnage : c'est de là que part le lait.
+const BOUT_BIBERON = 25;
+
+function dessinerBrasBiberon(c, manche, peau) {
+  // Manche, avant-bras et main
+  c.fillStyle = manche;
+  c.fillRect(-2, 18, 7, 5);
+  c.fillStyle = peau;
+  c.fillRect(5, 19, 6, 4);
+
+  // Flacon tenu à l'horizontale : lait, graduations, bague bleue et tétine
+  c.fillStyle = "rgba(255, 255, 255, 0.6)";
+  c.fillRect(9, 17.5, 11, 7);
+  c.fillStyle = "#fffdf5";
+  c.fillRect(9, 19.5, 11, 5);
+  c.fillStyle = "#90a4ae";
+  for (const gx of [12, 15, 18]) c.fillRect(gx, 18, 1, 2);
+  c.fillStyle = "#4fc3f7";
+  c.fillRect(20, 17, 3, 8);
+  c.fillStyle = "#f3c892";
+  c.beginPath();
+  c.ellipse(BOUT_BIBERON - 1, 21, 3, 2.2, 0, 0, Math.PI * 2);
+  c.fill();
+
+  // Main par-dessus le flacon
+  c.fillStyle = peau;
+  c.fillRect(9, 19, 4, 4);
+}
+
 // Homme en tenue de trail : bandeau, lunettes, gilet d'hydratation, short et chaussures crantées
-function dessinerTraileur(c, pas, enAir) {
+function dessinerTraileur(c, pas, enAir, biberon) {
   const peau = "#e0a271";
 
   // Jambes nues sous le short, chaussures de trail
@@ -1937,7 +2055,8 @@ function dessinerTraileur(c, pas, enAir) {
   c.fillStyle = "#ffffff";
   c.fillRect(-1, 0, 3, 2);
 
-  // Bras
+  // Bras (tendu avec le biberon une fois attrapé)
+  if (biberon) return dessinerBrasBiberon(c, "#ff7043", peau);
   const bras = enAir ? -4 : -pas * 0.6;
   c.fillStyle = "#ff7043";
   c.fillRect(-2 + bras, 18, 5, 6);
@@ -1946,7 +2065,7 @@ function dessinerTraileur(c, pas, enAir) {
 }
 
 // Femme enceinte aux cheveux frisés, en robe de grossesse
-function dessinerFemmeEnceinte(c, pas, anim, enAir) {
+function dessinerFemmeEnceinte(c, pas, anim, enAir, biberon) {
   const peau = "#e3a57a";
   const robe = "#3f7fd6";
   const cheveux = "#33201a";
@@ -2083,7 +2202,8 @@ function dessinerFemmeEnceinte(c, pas, anim, enAir) {
   c.arc(-2.5, -2, 1.3, 0, Math.PI * 2);
   c.fill();
 
-  // Bras, main posée près du ventre
+  // Bras, main posée près du ventre (tendu avec le biberon une fois attrapé)
+  if (biberon) return dessinerBrasBiberon(c, robe, peau);
   const bras = enAir ? -4 : -pas * 0.4;
   c.fillStyle = robe;
   c.fillRect(-3 + bras, 18, 5, 7);
@@ -2105,15 +2225,18 @@ function dessinerCoeur(x, y) {
 
 function dessinerVies() {
   for (let i = 0; i < vies; i++) dessinerCoeur(26 + i * 30, 24);
+  // Biberon attrapé : affiché à côté des cœurs
+  if (joueur.biberon) dessinerBiberon(26 + vies * 30 + 6, 26, false);
 }
 
 function dessinerBanniere() {
   ctx.save();
   ctx.globalAlpha = Math.min(1, banniere.duree / 30);
-  ctx.fillStyle = "rgba(15, 18, 38, 0.6)";
-  ctx.fillRect(W / 2 - 160, 30, 320, 50);
-  ctx.fillStyle = "#ffd54f";
   ctx.font = "bold 26px 'Segoe UI', sans-serif";
+  const largeur = Math.max(320, ctx.measureText(banniere.texte).width + 40);
+  ctx.fillStyle = "rgba(15, 18, 38, 0.6)";
+  ctx.fillRect(W / 2 - largeur / 2, 30, largeur, 50);
+  ctx.fillStyle = "#ffd54f";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText(banniere.texte, W / 2, 55);
@@ -2132,11 +2255,14 @@ function dessiner() {
   });
   for (const p of niveau.pieces) if (!p.prise && visible(p.x - 10, 20)) dessinerTetine(p);
   for (const e of niveau.ennemis) if (!e.mort && visible(e.x, e.w)) dessinerEnnemi(e);
+  const b = niveau.biberon;
+  if (!b.pris && visible(b.x - 20, 40)) dessinerBiberon(b.x, b.y, true);
+  for (const t of niveau.tirs) dessinerTir(t);
   dessinerDrapeau();
   dessinerPoussette();
   const j = joueur;
   if (j.invulnerable <= 0 || Math.floor(j.invulnerable / 5) % 2 === 0) {
-    dessinerPersonnage(ctx, j.x, j.y, perso, j.direction, j.anim, !j.auSol);
+    dessinerPersonnage(ctx, j.x, j.y, perso, j.direction, j.anim, !j.auSol, j.biberon);
   }
   dessinerEau();
   dessinerGrenouille();
@@ -2162,7 +2288,7 @@ function boucle(maintenant) {
 
 // ---------- Contrôles ----------
 
-const CODES_JEU = ["ArrowLeft", "ArrowRight", "ArrowUp", "Space", "KeyA", "KeyD", "KeyW"];
+const CODES_JEU = ["ArrowLeft", "ArrowRight", "ArrowUp", "Space", "KeyA", "KeyD", "KeyW", "KeyX", "KeyF"];
 const CODES_SAUT = ["Space", "ArrowUp", "KeyW"];
 
 document.addEventListener("keydown", (e) => {
@@ -2273,6 +2399,31 @@ boutonPleinEcran.addEventListener("click", (e) => {
   e.currentTarget.blur();
 });
 document.addEventListener("fullscreenchange", majBoutonPleinEcran);
+
+// ---------- Musique ----------
+
+function majBoutonMusique() {
+  const active = Musique.estActive();
+  boutonMusique.textContent = active ? "🔊 Musique" : "🔇 Musique";
+  boutonMusique.setAttribute("aria-label", active ? "Couper la musique" : "Remettre la musique");
+}
+
+boutonMusique.addEventListener("click", (e) => {
+  if (Musique.basculer() && enCours) {
+    Musique.jouer(difficulte);
+    Musique.suspendre(enPause);
+  }
+  majBoutonMusique();
+  e.currentTarget.blur();
+});
+
+// Onglet masqué : le jeu se fige, la musique aussi
+document.addEventListener("visibilitychange", () => {
+  if (enCours && !enPause) Musique.suspendre(document.hidden);
+});
+
+majBoutonMusique();
+window.addEventListener("load", () => setTimeout(Musique.preparer, 500));
 document.addEventListener("webkitfullscreenchange", majBoutonPleinEcran);
 
 boutonMessage.addEventListener("click", () => {

@@ -389,6 +389,12 @@ button:hover {
   margin: 0.75rem auto 0;
 }
 
+.groupe-tactile {
+  display: flex;
+  flex: 1;
+  gap: 0.75rem;
+}
+
 .controles-tactiles button {
   flex: 1;
   font-size: 1.6rem;
@@ -396,6 +402,10 @@ button:hover {
   border-radius: 12px;
   user-select: none;
   touch-action: none;
+}
+
+.controles-tactiles .bouton-tir.cache {
+  display: none;
 }
 
 @media (hover: none) and (pointer: coarse) {
@@ -441,22 +451,29 @@ button:hover {
 
 /* ---------- Plein écran ---------- */
 
-.hud .bouton-plein-ecran {
+.hud .bouton-hud {
   font-size: 0.85rem;
   padding: 0.15rem 0.8rem;
 }
 
-/* Vrai plein écran (:fullscreen) ou plein écran simulé sur iPhone (.plein-ecran) */
+/* Vrai plein écran (:fullscreen) ou plein écran simulé sur iPhone (.plein-ecran).
+   Grille : barre du haut, puis le jeu au centre ; les boutons tactiles sont dessous (portrait)
+   ou de part et d'autre (paysage), jamais par-dessus le jeu. */
 #jeu:fullscreen,
 #jeu.plein-ecran {
   position: fixed;
   inset: 0;
   z-index: 20;
   margin: 0;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto 1fr auto;
+  grid-template-areas:
+    "hud"
+    "jeu"
+    "tactile";
   align-items: center;
-  justify-content: center;
+  justify-items: center;
   gap: 0.3rem;
   padding: 0.3rem;
   background: var(--fond);
@@ -469,46 +486,89 @@ button:hover {
 
 #jeu:fullscreen .hud,
 #jeu.plein-ecran .hud {
+  grid-area: hud;
   margin: 0;
   padding: 0.15rem 0.5rem;
   font-size: 0.8rem;
   width: 100%;
+  max-width: none;
 }
 
 /* Le jeu prend toute la place disponible en gardant ses proportions 16:9 */
 #jeu:fullscreen .zone-jeu,
 #jeu.plein-ecran .zone-jeu {
-  width: min(100%, calc((100dvh - 2.6rem) * 16 / 9));
+  grid-area: jeu;
+  width: min(100%, (100dvh - 2.6rem) * 16 / 9);
   max-width: none;
 }
 
-/* Les boutons tactiles passent par-dessus le jeu, semi-transparents */
 #jeu:fullscreen .controles-tactiles,
 #jeu.plein-ecran .controles-tactiles {
-  position: fixed;
-  left: 0.6rem;
-  right: 0.6rem;
-  bottom: 0.6rem;
-  justify-content: flex-start;
-  margin: 0;
+  grid-area: tactile;
+  width: 100%;
   max-width: none;
-  pointer-events: none;
+  margin: 0;
 }
 
-#jeu:fullscreen .controles-tactiles button,
-#jeu.plein-ecran .controles-tactiles button {
-  flex: 0 0 auto;
-  width: 4.5rem;
-  height: 4.5rem;
-  padding: 0;
-  border-radius: 50%;
-  opacity: 0.55;
-  pointer-events: auto;
+@media (hover: none) and (pointer: coarse) {
+  /* Portrait : boutons sous le jeu, en gros */
+  #jeu:fullscreen .zone-jeu,
+  #jeu.plein-ecran .zone-jeu {
+    width: min(100%, (100dvh - 9rem) * 16 / 9);
+  }
+
+  #jeu:fullscreen .controles-tactiles button,
+  #jeu.plein-ecran .controles-tactiles button {
+    height: 4.5rem;
+  }
 }
 
-#jeu:fullscreen .controles-tactiles button:last-child,
-#jeu.plein-ecran .controles-tactiles button:last-child {
-  margin-left: auto;
+@media (hover: none) and (pointer: coarse) and (orientation: landscape) {
+  /* Paysage : le jeu prend toute la hauteur, déplacement à gauche, tir et saut à droite */
+  #jeu:fullscreen,
+  #jeu.plein-ecran {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      "hud hud hud"
+      "gauche jeu droite";
+  }
+
+  #jeu:fullscreen .zone-jeu,
+  #jeu.plein-ecran .zone-jeu {
+    /* Au moins 5 rem de chaque côté pour les boutons */
+    width: min(100vw - 10.6rem, (100dvh - 2.6rem) * 16 / 9);
+  }
+
+  #jeu:fullscreen .controles-tactiles,
+  #jeu.plein-ecran .controles-tactiles {
+    display: contents;
+  }
+
+  #jeu:fullscreen .groupe-deplacement,
+  #jeu.plein-ecran .groupe-deplacement {
+    grid-area: gauche;
+  }
+
+  #jeu:fullscreen .groupe-actions,
+  #jeu.plein-ecran .groupe-actions {
+    grid-area: droite;
+    flex-direction: column;
+  }
+
+  #jeu:fullscreen .groupe-tactile,
+  #jeu.plein-ecran .groupe-tactile {
+    align-self: stretch;
+    width: 100%;
+    gap: 0.4rem;
+  }
+
+  #jeu:fullscreen .controles-tactiles button,
+  #jeu.plein-ecran .controles-tactiles button {
+    height: auto;
+    padding: 0;
+    font-size: 1.8rem;
+  }
 }
 
 body.jeu-plein-ecran {

@@ -19,7 +19,7 @@ Ouvrir `index.html` dans un navigateur. Aucune installation n'est nécessaire.
 
 1. Entrer son prénom et son nom.
 2. Choisir la difficulté :
-   - **Facile** : sol continu (pas de ravins), pontons fixes, 3 ennemis ;
+   - **Facile** : sol continu (pas de ravins), 4 grands pontons fixes, 2 animaux et le castor ;
    - **Moyen** : le niveau de base, 6 ennemis, 2 pontons mobiles ;
    - **Difficile** : 12 ennemis plus rapides, 6 pontons mobiles.
 3. Choisir un personnage (homme ou femme). On commence avec 4 vies, affichées en cœurs en haut à gauche.
@@ -47,9 +47,11 @@ Ouvrir `admin.html` (aucun lien depuis le jeu) : résumé (parties, arrivées, n
 
 Sans feuille Google Sheets, le backoffice ne voit que les parties jouées **dans le même navigateur**. Avec la feuille, saisir le mot de passe (`CLE_ADMIN` du script Google) pour charger les parties de tous les joueurs.
 
-Tétines : +10 · Animal écrasé : +50 (sauf les hérissons, qui piquent) · Bonus d'arrivée : +100 par vie restante.
+Tétines : +10 · Animal écrasé : +50 (sauf les hérissons, qui piquent) · Biberon : +20 · Animal touché par un jet de lait : +50 · Bonus d'arrivée : +100 par vie restante.
 
-Contrôles : ← → ou Q/D pour se déplacer, Espace / ↑ / Z pour sauter, P pour la pause. Sur mobile, des boutons s'affichent à l'écran.
+Biberon : il flotte en hauteur à la fin des collines (on l'attrape en sautant depuis la dernière planche). Une fois pris, la touche X (ou F, ou le bouton 🍼 sur mobile) tire du lait qui élimine les animaux, hérissons compris.
+
+Contrôles : ← → ou Q/D pour se déplacer, Espace / ↑ / Z pour sauter, X pour tirer du lait (avec le biberon), P pour la pause. Sur mobile, des boutons s'affichent à l'écran.
 
 ## Modifier le niveau
 
@@ -58,3 +60,9 @@ Le niveau est décrit dans la fonction `creerNiveau()` de `script.js` : platefor
 ## Mise en ligne (GitHub Pages)
 
 Les navigateurs gardent les fichiers en cache. Après une modification de `style.css`, `config.js`, `script.js` ou `admin.js`, changer le numéro `?v=…` qui suit leur nom dans `index.html` et `admin.html` : les joueurs reçoivent alors tout de suite la nouvelle version.
+
+## Musique
+
+Chaque difficulté a sa musique originale, synthétisée dans le navigateur (aucun fichier audio) : [musique.js](musique.js), version « 32 bits » (cordes pincées simulées, chorus, réverbération).
+
+L'ancienne version « 16 bits » est gardée dans [musique-16bits.js](musique-16bits.js). Pour y revenir, remplacer `musique.js` par `musique-16bits.js` dans la balise `<script>` de `index.html`.
