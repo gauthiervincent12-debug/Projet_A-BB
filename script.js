@@ -30,6 +30,8 @@ const sectionJeu = document.getElementById("jeu");
 const boutonPleinEcran = document.getElementById("bouton-plein-ecran");
 const boutonMusique = document.getElementById("bouton-musique");
 const boutonTir = document.getElementById("bouton-tir");
+const boutonMetal = document.getElementById("bouton-metal");
+const boutonCoeur = document.getElementById("bouton-coeur");
 const ecranRegles = document.getElementById("ecran-regles");
 const boutonRegles = document.getElementById("bouton-regles");
 
@@ -260,7 +262,7 @@ function creerNiveau(difficulte) {
   }
 
   return {
-    plateformes, ennemis, pieces, tirs: [],
+    plateformes, ennemis, pieces, tirs: [], coeurs: [],
     biberon: { ...BIBERON, pris: false },
     reblochon: { ...REBLOCHON, pris: false },
     grotteVisible: 0,
@@ -385,6 +387,8 @@ function demarrer(choix) {
   majHud();
   ecranSelection.classList.add("cache");
   boutonTir.classList.add("cache");
+  boutonMetal.classList.toggle("cache", perso !== "homme");
+  boutonCoeur.classList.toggle("cache", perso !== "femme");
   ecranMessage.classList.add("cache");
   document.activeElement.blur();
   enCours = true;
@@ -508,6 +512,28 @@ function basculerPause() {
   }
 }
 
+// La Femme envoie des cœurs : chaque animal visible se couche, charmé, et devient un simple décor
+function lancerCoeurs() {
+  const j = joueur;
+  const cx = j.x + j.w / 2;
+  const cy = j.y + j.h / 2;
+  for (let i = 0; i < 14; i++) {
+    const angle = (i / 14) * Math.PI * 2;
+    const vitesse = 1.6 + Math.random() * 1.2;
+    niveau.coeurs.push({
+      x: cx + Math.cos(angle) * 10,
+      y: cy + Math.sin(angle) * 10,
+      vx: Math.cos(angle) * vitesse,
+      vy: Math.sin(angle) * vitesse - 1,
+      vie: 50 + Math.random() * 20,
+      taille: 0.6 + Math.random() * 0.5,
+    });
+  }
+  for (const e of niveau.ennemis) {
+    if (!e.mort && !e.charme && visible(e.x, e.w)) e.charme = true;
+  }
+}
+
 function ajouterScore(points) {
   score += points;
   majHud();
@@ -522,6 +548,8 @@ const gauche = () => touches.ArrowLeft || touches.KeyA;
 const droite = () => touches.ArrowRight || touches.KeyD;
 const sautMaintenu = () => touches.Space || touches.ArrowUp || touches.KeyW;
 const tirMaintenu = () => touches.KeyX || touches.KeyF;
+// Touche bas : signe du metal pour l'Homme, cœurs pour la Femme
+const toucheBas = () => touches.ArrowDown || touches.KeyS;
 
 function mettreAJour(dt) {
   temps += dt;
@@ -604,6 +632,25 @@ function mettreAJour(dt) {
   if (j.y > LIMITE_CHUTE) return perdreVie();
   if (j.x + j.w > LAC.debut && j.x < LAC.fin && j.y + j.h > LAC.surface + 6) return perdreVie();
 
+  // Touche bas, à chaque nouvel appui : riff du signe du metal (Homme) ou pluie de cœurs (Femme).
+  // Tant que l'Homme tient le signe, les animaux visibles se figent.
+  const bas = toucheBas();
+  if (bas && !j.bas) {
+    if (perso === "homme") Musique.riff?.();
+    else lancerCoeurs();
+  }
+  j.bas = bas;
+  const metal = perso === "homme" && bas;
+
+  // Cœurs qui s'envolent autour de la Femme
+  for (const c of niveau.coeurs) {
+    c.x += c.vx * dt;
+    c.y += c.vy * dt;
+    c.vy -= 0.03 * dt;
+    c.vie -= dt;
+  }
+  niveau.coeurs = niveau.coeurs.filter((c) => c.vie > 0);
+
   // Ennemis
   for (const e of niveau.ennemis) {
     if (e.mort) continue;
@@ -614,15 +661,29 @@ function mettreAJour(dt) {
       e.max += dx;
       e.y += dy;
     }
-    e.x += e.vx * dt;
-    e.anim += 0.2 * dt;
-    if (e.x < e.min) {
-      e.x = e.min;
-      e.vx = Math.abs(e.vx);
+    if (e.charme) {
+      // Animal endormi : en passant devant, on récupère ses points et son petit cœur (une seule fois)
+      if (!e.coeurRecupere && chevauche(j, e)) {
+        e.coeurRecupere = true;
+        ajouterScore(50);
+      }
+      continue;
     }
-    if (e.x + e.w > e.max) {
-      e.x = e.max - e.w;
-      e.vx = -Math.abs(e.vx);
+    // Étourdi par le signe du metal : figé tant qu'on tient le signe, puis encore 2 secondes
+    if (metal && visible(e.x, e.w)) e.etourdi = 120;
+    else if (e.etourdi > 0) e.etourdi -= dt;
+    e.fige = e.etourdi > 0;
+    if (!e.fige) {
+      e.x += e.vx * dt;
+      e.anim += 0.2 * dt;
+      if (e.x < e.min) {
+        e.x = e.min;
+        e.vx = Math.abs(e.vx);
+      }
+      if (e.x + e.w > e.max) {
+        e.x = e.max - e.w;
+        e.vx = -Math.abs(e.vx);
+      }
     }
     if (j.invulnerable > 0 || !chevauche(j, e)) continue;
     const basAvant = j.y + j.h - j.vy * dt;
@@ -661,7 +722,7 @@ function mettreAJour(dt) {
     t.x += t.vx * dt;
     t.vie -= dt;
     if (niveau.plateformes.some((p) => chevauche(t, p))) t.vie = 0;
-    const cible = niveau.ennemis.find((e) => !e.mort && chevauche(t, e));
+    const cible = niveau.ennemis.find((e) => !e.mort && !e.charme && chevauche(t, e));
     if (cible && t.vie > 0) {
       cible.mort = true;
       t.vie = 0;
@@ -2035,6 +2096,64 @@ const DESSINS_ENNEMIS = {
   bouquetin: dessinerBouquetin,
 };
 
+// Petit cœur rose (centre en x, y), utilisé pour les cœurs en vol et au-dessus des animaux charmés
+function dessinerPetitCoeur(x, y, taille) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(taille, taille);
+  ctx.fillStyle = "#ff5c8a";
+  ctx.strokeStyle = "#ffffff";
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(0, 6);
+  ctx.bezierCurveTo(-9, 0, -6, -7, 0, -3);
+  ctx.bezierCurveTo(6, -7, 9, 0, 0, 6);
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
+}
+
+// Animal charmé : couché sur le dos, les pattes en l'air, endormi (Zzz) avec un petit cœur à récupérer
+function dessinerAnimalCharme(e) {
+  const cx = e.x + e.w / 2;
+  const sol = e.y + e.h;
+  const hauteur = e.h * 0.8;
+  ctx.save();
+  // Retourné (et un peu tassé) : le dos touche le sol, les pattes pointent vers le ciel
+  ctx.translate(cx, sol - hauteur);
+  ctx.scale(e.vx > 0 ? 1 : -1, -0.8);
+  DESSINS_ENNEMIS[e.type](e);
+  ctx.restore();
+  // Zzz qui montent en grossissant, et le petit cœur à côté tant qu'on ne l'a pas récupéré
+  const haut = sol - hauteur - 6 + Math.sin(temps * 0.08 + e.x) * 2;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "alphabetic";
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = "#37474f";
+  ctx.fillStyle = "#e3f2fd";
+  [["z", 9], ["z", 11], ["Z", 14]].forEach(([lettre, taille], i) => {
+    ctx.font = `bold ${taille}px 'Segoe UI', sans-serif`;
+    ctx.strokeText(lettre, cx - 6 + i * 6, haut - i * 7);
+    ctx.fillText(lettre, cx - 6 + i * 6, haut - i * 7);
+  });
+  if (!e.coeurRecupere) dessinerPetitCoeur(cx + 18, haut - 10, 0.8);
+}
+
+// Note de musique qui danse au-dessus d'un animal figé par le signe du metal
+function dessinerNoteFigee(e) {
+  const x = e.x + e.w / 2;
+  const y = e.y - 12 + Math.sin(temps * 0.2 + e.x) * 3;
+  ctx.fillStyle = "#ffd54f";
+  ctx.strokeStyle = "#5d4037";
+  ctx.lineWidth = 1;
+  ctx.font = "bold 22px 'Segoe UI', sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "alphabetic";
+  ctx.lineWidth = 2;
+  ctx.strokeText("♪", x, y);
+  ctx.fillText("♪", x, y);
+}
+
 function dessinerEnnemi(e) {
   ctx.save();
   ctx.translate(e.x + e.w / 2, e.y + e.h);
@@ -2284,14 +2403,14 @@ function dessinerEau() {
 }
 
 // Personnage dans une boîte de 26 × 44 dont (x, y) est le coin haut-gauche
-function dessinerPersonnage(c, x, y, type, direction, anim, enAir, biberon = false) {
+function dessinerPersonnage(c, x, y, type, direction, anim, enAir, biberon = false, cornes = false) {
   const pas = enAir ? 4 : Math.sin(anim) * 5;
 
   c.save();
   c.translate(x + 13, y);
   c.scale(direction, 1);
   if (type === "femme") dessinerFemmeEnceinte(c, pas, anim, enAir, biberon);
-  else dessinerTraileur(c, pas, enAir, biberon);
+  else dessinerTraileur(c, pas, enAir, biberon, cornes);
   c.restore();
 }
 
@@ -2326,7 +2445,7 @@ function dessinerBrasBiberon(c, manche, peau) {
 }
 
 // Homme en tenue de trail : bandeau, lunettes, gilet d'hydratation, short et chaussures crantées
-function dessinerTraileur(c, pas, enAir, biberon) {
+function dessinerTraileur(c, pas, enAir, biberon, cornes) {
   const peau = "#e0a271";
 
   // Jambes nues sous le short, chaussures de trail
@@ -2339,6 +2458,10 @@ function dessinerTraileur(c, pas, enAir, biberon) {
   c.fillStyle = "#ffeb3b";
   c.fillRect(-8 + pas, 43, 9, 1);
   c.fillRect(1 - pas, 43, 9, 1);
+
+  // Bâton de marche de l'autre main, derrière le corps (pas de bâtons une fois le biberon pris)
+  const bras = enAir ? -4 : -pas * 0.6;
+  if (!biberon) dessinerBaton(c, 1 - bras, "#6d7378");
 
   // Sac d'hydratation dans le dos
   c.fillStyle = "#263238";
@@ -2399,13 +2522,47 @@ function dessinerTraileur(c, pas, enAir, biberon) {
   c.fillStyle = "#ffffff";
   c.fillRect(-1, 0, 3, 2);
 
-  // Bras (tendu avec le biberon une fois attrapé)
+  // Bras : signe du metal (touche bas), sinon biberon tenu devant, sinon bras qui balance avec son bâton
+  if (cornes) return dessinerCornesDuMetal(c, "#ff7043", peau);
   if (biberon) return dessinerBrasBiberon(c, "#ff7043", peau);
-  const bras = enAir ? -4 : -pas * 0.6;
+  dessinerBaton(c, 0.5 + bras, "#9aa3a8");
   c.fillStyle = "#ff7043";
   c.fillRect(-2 + bras, 18, 5, 6);
   c.fillStyle = peau;
   c.fillRect(-2 + bras, 24, 5, 8);
+}
+
+// Bâton de marche tenu à hauteur de hanche, la pointe vers l'arrière (repère du personnage, regard à droite)
+function dessinerBaton(c, mainX, couleur) {
+  const main = { x: mainX, y: 30 };
+  const pointe = { x: mainX - 14, y: 44 };
+  c.strokeStyle = couleur;
+  c.lineWidth = 1.5;
+  c.lineCap = "round";
+  c.beginPath();
+  c.moveTo(main.x + 1, main.y - 3);
+  c.lineTo(pointe.x, pointe.y);
+  c.stroke();
+  // Poignée noire, rondelle et pointe
+  c.fillStyle = "#263238";
+  c.fillRect(main.x - 0.5, main.y - 5, 3, 5);
+  c.fillRect(pointe.x + 1, pointe.y - 3.5, 4, 1.2);
+}
+
+// Signe du metal : bras levé, poing fermé, index et auriculaire tendus vers le ciel
+function dessinerCornesDuMetal(c, manche, peau) {
+  // Bras plié vers le haut, devant le visage
+  c.fillStyle = manche;
+  c.fillRect(2, 17, 9, 5);
+  c.fillStyle = peau;
+  c.fillRect(9, 6, 4, 14);
+  // Poing, pouce replié et doigts levés
+  c.fillRect(8, 1, 7, 6);
+  c.fillStyle = "#c98a5c";
+  c.fillRect(9, 3, 4, 1);
+  c.fillStyle = peau;
+  c.fillRect(8, -6, 2, 7);
+  c.fillRect(13, -5, 2, 6);
 }
 
 // Femme enceinte aux cheveux frisés, en robe de grossesse
@@ -2444,31 +2601,36 @@ function dessinerFemmeEnceinte(c, pas, anim, enAir, biberon) {
   c.fillStyle = "#bbdefb";
   c.fillRect(-8, 20, 17, 2);
 
-  // Tête : lunettes de soleil « œil de chat », sourcil, joue rosée et grand sourire
+  // Tête : lunettes de vue (fine monture, verre clair, l'œil visible derrière), sourcil, joue rosée et grand sourire
   c.fillStyle = peau;
   c.fillRect(-8, 2, 16, 15);
+  // Œil derrière le verre
+  c.fillStyle = "#ffffff";
+  c.fillRect(3.6, 7.9, 3.4, 2);
   c.fillStyle = "#3b2416";
-  c.fillRect(-3, 7.6, 4, 1);
+  c.fillRect(4.8, 7.8, 1.8, 2.2);
+  // Verre à peine teinté et reflet
+  c.fillStyle = "rgba(190, 225, 255, 0.35)";
   c.beginPath();
-  c.moveTo(1, 7.5);
-  c.lineTo(0, 6);
-  c.lineTo(8.8, 6.8);
-  c.lineTo(8.8, 9.5);
-  c.lineTo(6.8, 11.2);
-  c.lineTo(3, 11.2);
-  c.lineTo(1, 9.5);
+  c.moveTo(1.6, 7);
+  c.lineTo(8.4, 7);
+  c.lineTo(8.4, 9.6);
+  c.lineTo(7, 11);
+  c.lineTo(3, 11);
+  c.lineTo(1.6, 9.6);
+  c.closePath();
   c.fill();
-  c.fillStyle = "#4e342e";
+  c.fillStyle = "rgba(255, 255, 255, 0.7)";
+  c.fillRect(6.9, 7.6, 0.9, 0.9);
+  // Monture fine et branche jusqu'à l'oreille
+  c.strokeStyle = "#5d2e1f";
+  c.lineWidth = 0.9;
+  c.lineJoin = "round";
+  c.stroke();
   c.beginPath();
-  c.moveTo(2, 7.8);
-  c.lineTo(7.8, 7.8);
-  c.lineTo(7.8, 9.3);
-  c.lineTo(6.4, 10.4);
-  c.lineTo(3.3, 10.4);
-  c.lineTo(2, 9.3);
-  c.fill();
-  c.fillStyle = "rgba(255, 255, 255, 0.45)";
-  c.fillRect(5.6, 8.1, 1.4, 0.9);
+  c.moveTo(1.6, 7.6);
+  c.lineTo(-3, 8);
+  c.stroke();
   c.fillStyle = cheveux;
   c.fillRect(2, 5, 5, 1);
   c.fillStyle = "rgba(240, 100, 110, 0.55)";
@@ -2599,7 +2761,21 @@ function dessiner() {
     if (i > 0 && visible(x, 30)) dessinerBalise(x, i <= pointReprise);
   });
   for (const p of niveau.pieces) if (!p.prise && visible(p.x - 10, 20)) dessinerTetine(p);
-  for (const e of niveau.ennemis) if (!e.mort && visible(e.x, e.w)) dessinerEnnemi(e);
+  for (const e of niveau.ennemis) {
+    if (e.mort || !visible(e.x, e.w)) continue;
+    if (e.charme) {
+      dessinerAnimalCharme(e);
+      continue;
+    }
+    dessinerEnnemi(e);
+    if (e.fige) dessinerNoteFigee(e);
+  }
+  for (const c of niveau.coeurs) {
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, c.vie / 25);
+    dessinerPetitCoeur(c.x, c.y, c.taille);
+    ctx.restore();
+  }
   const b = niveau.biberon;
   if (!b.pris && visible(b.x - 20, 40)) dessinerBiberon(b.x, b.y, true);
   if (!niveau.reblochon.pris && visible(REBLOCHON.x - 20, 40)) dessinerReblochon(REBLOCHON.x, REBLOCHON.y);
@@ -2613,7 +2789,7 @@ function dessiner() {
     ctx.save();
     ctx.translate(j.x, j.y);
     ctx.scale(j.echelle, j.echelle);
-    dessinerPersonnage(ctx, 0, 0, perso, j.direction, j.anim, !j.auSol, j.biberon);
+    dessinerPersonnage(ctx, 0, 0, perso, j.direction, j.anim, !j.auSol, j.biberon, perso === "homme" && toucheBas());
     ctx.restore();
   }
   dessinerEau();
@@ -2640,7 +2816,7 @@ function boucle(maintenant) {
 
 // ---------- Contrôles ----------
 
-const CODES_JEU = ["ArrowLeft", "ArrowRight", "ArrowUp", "Space", "KeyA", "KeyD", "KeyW", "KeyX", "KeyF"];
+const CODES_JEU = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Space", "KeyA", "KeyD", "KeyW", "KeyS", "KeyX", "KeyF"];
 const CODES_SAUT = ["Space", "ArrowUp", "KeyW"];
 
 document.addEventListener("keydown", (e) => {

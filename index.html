@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Annonce du sexe de bébé — L'Ascension</title>
-  <link rel="stylesheet" href="style.css?v=202611012203">
+  <link rel="stylesheet" href="style.css?v=202611012236">
 </head>
 <body>
   <header>
@@ -74,7 +74,7 @@
             </ul>
             <h4>🎁 Les cadeaux, pour chaque niveau (Facile, Moyen et Difficile)</h4>
             <ul>
-              <li>🍼 <strong>Le pronostic</strong> : un cadeau pour celui ou celle qui trouve le sexe du bébé <strong>du premier coup</strong>, avec le meilleur temps. Seul ton premier essai compte !</li>
+              <li>🍼 <strong>Le pronostic</strong> : un cadeau pour celui ou celle qui trouve le sexe du bébé <strong>du premier coup</strong>, avec le meilleur temps. Seule ta toute première partie compte, quel que soit le niveau !</li>
               <li>🏆 <strong>Le score</strong> : un cadeau pour celui ou celle qui marque <strong>le plus de points</strong> ; à égalité, le meilleur chrono l'emporte.</li>
             </ul>
             <p class="note-regles">Utilise toujours le même prénom et le même nom pour que tes parties soient bien comptées.</p>
@@ -104,6 +104,8 @@
           <button data-tactile="ArrowRight" aria-label="Droite">▶</button>
         </div>
         <div class="groupe-tactile groupe-actions">
+          <button id="bouton-metal" class="bouton-metal cache" data-tactile="ArrowDown" aria-label="Signe du metal">🤘</button>
+          <button id="bouton-coeur" class="bouton-metal cache" data-tactile="ArrowDown" aria-label="Envoyer des cœurs">❤️</button>
           <button id="bouton-tir" class="bouton-tir cache" data-tactile="KeyX" aria-label="Tirer du lait">🍼</button>
           <button data-tactile="Space" aria-label="Sauter">⤒</button>
         </div>
@@ -113,7 +115,7 @@
         <div class="modale-contenu">
           <h3 id="photo-titre"></h3>
           <!-- Vidéo de l'annonce : déposer le fichier videos/annonce.mp4 -->
-          <video id="video-annonce" src="videos/annonce.mp4?v=202611012203" controls playsinline preload="none"></video>
+          <video id="video-annonce" src="videos/annonce.mp4?v=202611012236" controls playsinline preload="none"></video>
           <p id="video-absente" class="video-absente cache">🎬 La vidéo arrive bientôt…</p>
           <button id="bouton-fermer-photo">Rejouer</button>
         </div>
@@ -125,7 +127,7 @@
       <ul>
         <li>🎁 <strong>Les cadeaux, pour chaque niveau (Facile, Moyen et Difficile)</strong> :
           <ul>
-            <li>🍼 <strong>Le pronostic</strong> : un cadeau pour celui ou celle qui trouve le sexe du bébé <strong>du premier coup</strong>, avec le meilleur temps. Seul ton premier essai compte !</li>
+            <li>🍼 <strong>Le pronostic</strong> : un cadeau pour celui ou celle qui trouve le sexe du bébé <strong>du premier coup</strong>, avec le meilleur temps. Seule ta toute première partie compte, quel que soit le niveau !</li>
             <li>🏆 <strong>Le score</strong> : un cadeau pour celui ou celle qui marque <strong>le plus de points</strong> ; à égalité, le meilleur chrono l'emporte.</li>
           </ul>
         </li>
@@ -140,7 +142,7 @@
         <li>❤️ Tu commences avec 4 vies, affichées en haut à gauche de l'écran de jeu.</li>
         <li>🎚️ Facile : sol continu, pontons fixes, peu d'ennemis · Moyen : niveau normal · Difficile : plus d'ennemis, plus rapides, et des pontons mobiles presque partout.</li>
         <li>Bonus à l'arrivée : +100 points par vie restante.</li>
-        <li>Contrôles : flèches ← → (ou Q / D), saut avec Espace / ↑ / Z, <kbd>P</kbd> pour la pause. Boutons à l'écran sur mobile, bouton <strong>⛶ Plein écran</strong> pour jouer en grand et <strong>🔊 Musique</strong> pour couper le son.</li>
+        <li>Contrôles : flèches ← → (ou Q / D), saut avec Espace / ↑ / Z, <kbd>P</kbd> pour la pause, ↓ (ou S, ou le bouton 🤘 sur mobile) pour faire le signe du metal avec le personnage Homme : un riff de guitare retentit et les animaux à l'écran se figent tant que tu le tiens, puis encore 2 secondes. Avec le personnage Femme, la même touche (ou le bouton ❤️) envoie des cœurs : les animaux à l'écran s'endorment, charmés, et ne sont plus dangereux ; passe devant eux pour récupérer leur petit cœur (+50 points). Boutons à l'écran sur mobile, bouton <strong>⛶ Plein écran</strong> pour jouer en grand et <strong>🔊 Musique</strong> pour couper le son.</li>
         <li>🎵 Chaque difficulté a sa propre musique, en 8 bits.</li>
       </ul>
     </section>
@@ -150,8 +152,8 @@
     <p>Développé par Céline et Vincent avec leur pote l'IA Claude Code 😉</p>
   </footer>
 
-  <script src="config.js?v=202611012203"></script>
-  <script src="musique.js?v=202611012203"></script>
-  <script src="script.js?v=202611012203"></script>
+  <script src="config.js?v=202611012236"></script>
+  <script src="musique.js?v=202611012236"></script>
+  <script src="script.js?v=202611012236"></script>
 </body>
 </html>

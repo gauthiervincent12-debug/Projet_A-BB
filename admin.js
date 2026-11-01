@@ -8,6 +8,11 @@ const NOMS_REPONSE = { fille: "👧 Fille", "garçon": "👦 Garçon" };
 const NOMS_PERSONNAGE = { homme: "Homme", femme: "Femme" };
 
 const listeScores = document.getElementById("liste-scores");
+const listeGagnants = document.getElementById("liste-gagnants");
+const choixBonneReponse = document.getElementById("bonne-reponse");
+const CLE_BONNE_REPONSE = "abb-bonne-reponse";
+const NIVEAUX = ["facile", "moyen", "difficile"];
+const PODIUM = 3;
 const aucunScore = document.getElementById("aucun-score");
 const champCle = document.getElementById("cle-admin");
 const etatEnLigne = document.getElementById("etat-en-ligne");
@@ -96,7 +101,91 @@ function lignes() {
     }));
 }
 
+// ---------- Gagnants ----------
+
+// Temps en millisecondes, que la partie vienne du navigateur (nombre) ou de la feuille (« m:ss:mmm »)
+function millisecondes(temps) {
+  if (!String(temps).includes(":")) return Number(temps) || 0;
+  const [minutes, secondes, millis = 0] = String(temps).split(":").map(Number);
+  return (minutes * 60 + secondes) * 1000 + millis;
+}
+
+// Un même joueur, même s'il a tapé son nom avec d'autres majuscules, accents ou espaces
+const identifiant = (p) =>
+  `${p.prenom} ${p.nom}`.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+
+function calculerGagnants(scores, bonneReponse) {
+  const parties = scores
+    .map((p) => ({ ...p, ms: millisecondes(p.temps) }))
+    .sort((a, b) => String(a.date).localeCompare(String(b.date)));
+
+  // Pronostic : la toute première partie de chaque joueur, tous niveaux confondus.
+  // Son orthographe sert aussi à afficher le nom du joueur partout.
+  const premieres = new Map();
+  for (const p of parties) {
+    if (!premieres.has(identifiant(p))) premieres.set(identifiant(p), p);
+  }
+  for (const p of parties) {
+    const premiere = premieres.get(identifiant(p));
+    p.joueur = `${premiere.prenom.trim()} ${premiere.nom.trim()}`;
+  }
+  const pronostic = (niveau) =>
+    [...premieres.values()]
+      .filter((p) => p.difficulte === niveau && p.gagne && p.reponse === bonneReponse)
+      .sort((a, b) => a.ms - b.ms)
+      .slice(0, PODIUM);
+
+  // Score : toutes les parties comptent ; le meilleur score de chaque joueur, le chrono départage les égalités
+  const score = (niveau) => {
+    const meilleures = new Map();
+    for (const p of parties.filter((p) => p.difficulte === niveau)) {
+      const actuelle = meilleures.get(identifiant(p));
+      if (!actuelle || p.score > actuelle.score || (p.score === actuelle.score && p.ms < actuelle.ms)) {
+        meilleures.set(identifiant(p), p);
+      }
+    }
+    return [...meilleures.values()].sort((a, b) => b.score - a.score || a.ms - b.ms).slice(0, PODIUM);
+  };
+
+  return NIVEAUX.map((niveau) => ({
+    niveau,
+    pronostic: bonneReponse ? pronostic(niveau) : null,
+    score: score(niveau),
+  }));
+}
+
+function listePodium(parties, detail) {
+  if (!parties.length) return document.createTextNode("Personne pour l'instant");
+  const liste = document.createElement("ol");
+  for (const p of parties) {
+    const ligne = document.createElement("li");
+    ligne.textContent = `${p.joueur} — ${detail(p)}`;
+    liste.append(ligne);
+  }
+  return liste;
+}
+
+function afficherGagnants() {
+  const bonneReponse = choixBonneReponse.value;
+  listeGagnants.replaceChildren(
+    ...calculerGagnants(lireScores(), bonneReponse).map(({ niveau, pronostic, score }) => {
+      const tr = document.createElement("tr");
+      const tdNiveau = document.createElement("td");
+      tdNiveau.textContent = NOMS_DIFFICULTE[niveau];
+      const tdPronostic = document.createElement("td");
+      tdPronostic.append(
+        pronostic ? listePodium(pronostic, (p) => formaterTemps(p.temps)) : document.createTextNode("Choisis d'abord la bonne réponse")
+      );
+      const tdScore = document.createElement("td");
+      tdScore.append(listePodium(score, (p) => `${p.score} points en ${formaterTemps(p.temps)}`));
+      tr.append(tdNiveau, tdPronostic, tdScore);
+      return tr;
+    })
+  );
+}
+
 function afficher() {
+  afficherGagnants();
   const scores = lireScores();
   document.getElementById("stat-parties").textContent = scores.length;
   document.getElementById("stat-arrivees").textContent = scores.filter((p) => p.gagne).length;
@@ -157,6 +246,21 @@ window.addEventListener("storage", (e) => {
 document.getElementById("form-cle").addEventListener("submit", (e) => {
   e.preventDefault();
   chargerEnLigne();
+});
+
+// La bonne réponse est mémorisée dans ce navigateur
+try {
+  choixBonneReponse.value = localStorage.getItem(CLE_BONNE_REPONSE) ?? "";
+} catch {
+  // Stockage indisponible
+}
+choixBonneReponse.addEventListener("change", () => {
+  try {
+    localStorage.setItem(CLE_BONNE_REPONSE, choixBonneReponse.value);
+  } catch {
+    // Stockage indisponible : le choix ne sera pas conservé
+  }
+  afficherGagnants();
 });
 
 afficher();

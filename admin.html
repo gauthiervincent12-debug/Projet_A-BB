@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow">
   <title>Projet A-BB — Backoffice</title>
-  <link rel="stylesheet" href="style.css?v=202611012203">
+  <link rel="stylesheet" href="style.css?v=202611012236">
 </head>
 <body>
   <header>
@@ -23,6 +23,31 @@
         <button type="submit">Charger tous les joueurs</button>
       </form>
       <p id="etat-en-ligne" class="note"></p>
+    </section>
+
+    <section>
+      <h2>🏆 Gagnants</h2>
+      <div class="actions">
+        <label for="bonne-reponse">Bonne réponse :</label>
+        <select id="bonne-reponse">
+          <option value="">— à choisir —</option>
+          <option value="fille">👧 Fille</option>
+          <option value="garçon">👦 Garçon</option>
+        </select>
+      </div>
+      <div class="tableau-conteneur">
+        <table class="tableau-gagnants">
+          <thead>
+            <tr>
+              <th>Niveau</th>
+              <th>🍼 Pronostic : 1ʳᵉ partie gagnée avec la bonne réponse, meilleur temps</th>
+              <th>🏆 Score : le plus de points (chrono pour départager)</th>
+            </tr>
+          </thead>
+          <tbody id="liste-gagnants"></tbody>
+        </table>
+      </div>
+      <p class="note">Le 1ᵉʳ de chaque liste gagne ; les suivants servent si un gagnant est absent. Pronostic : seule la toute première partie de chaque joueur compte, quel que soit son niveau.</p>
     </section>
 
     <section>
@@ -64,7 +89,7 @@
     </section>
   </main>
 
-  <script src="config.js?v=202611012203"></script>
-  <script src="admin.js?v=202611012203"></script>
+  <script src="config.js?v=202611012236"></script>
+  <script src="admin.js?v=202611012236"></script>
 </body>
 </html>

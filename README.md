@@ -39,8 +39,10 @@ Déposer la vidéo dans `videos/annonce.mp4` (format MP4 / H.264, quelques dizai
 
 Au début de la première partie sur un appareil, un écran « Règles du jeu » résume le jeu et annonce les cadeaux ; on le relit avec le bouton « 📜 Règles et cadeaux » de l'écran de départ. Pour chaque niveau (Facile, Moyen et Difficile) :
 
-- **le pronostic** : un cadeau pour celui ou celle qui trouve le sexe du bébé du premier coup, avec le meilleur temps (seul le premier essai compte) ;
-- **le score** : un cadeau pour celui ou celle qui marque le plus de points ; à égalité, le meilleur chrono l'emporte.
+- **le pronostic** : un cadeau pour celui ou celle qui trouve le sexe du bébé du premier coup, avec le meilleur temps. Seule la toute première partie du joueur compte, quel que soit le niveau : elle doit aller jusqu'à la poussette avec la bonne réponse, et elle concourt dans le niveau où elle a été jouée ;
+- **le score** : un cadeau pour celui ou celle qui marque le plus de points (toutes les parties comptent) ; le chrono ne sert qu'à départager les égalités de points.
+
+Le backoffice calcule les gagnants automatiquement (section « 🏆 Gagnants ») une fois la bonne réponse choisie. Les joueurs sont reconnus à leur prénom et nom, sans tenir compte des majuscules, des accents ni des espaces en trop.
 
 ## Scores
 

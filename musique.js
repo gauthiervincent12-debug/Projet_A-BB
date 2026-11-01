@@ -270,6 +270,49 @@ const Musique = (() => {
     minuteur = setInterval(programmer, 25);
   }
 
+  // Riff de guitare saturée joué quand le personnage fait le signe du metal : [note, départ, durée] en secondes.
+  // Chaque note est un accord de puissance (fondamentale + quinte), passé dans une distorsion.
+  const RIFF = [
+    ["E2", 0, 0.16], ["E2", 0.2, 0.08], ["G2", 0.3, 0.16], ["E2", 0.5, 0.08],
+    ["A2", 0.6, 0.28], ["G2", 0.92, 0.12], ["B2", 1.08, 0.5],
+  ];
+  let courbeRiff = null;
+
+  function riff() {
+    if (!active || !initialiser()) return;
+    audio.resume();
+    if (!courbeRiff) {
+      courbeRiff = new Float32Array(1024);
+      for (let i = 0; i < courbeRiff.length; i++) {
+        const x = (i / (courbeRiff.length - 1)) * 2 - 1;
+        courbeRiff[i] = (41 * x) / (1 + 40 * Math.abs(x));
+      }
+    }
+    const disto = audio.createWaveShaper();
+    disto.curve = courbeRiff;
+    const passeBas = audio.createBiquadFilter();
+    passeBas.type = "lowpass";
+    passeBas.frequency.value = 3000;
+    const volume = audio.createGain();
+    volume.gain.value = 0.45;
+    disto.connect(passeBas).connect(volume).connect(sortie);
+    const t0 = audio.currentTime + 0.02;
+    for (const [note, debut, duree] of RIFF) {
+      for (const f of [frequence(note), frequence(note) * 1.5]) {
+        const osc = audio.createOscillator();
+        const gain = audio.createGain();
+        osc.type = "sawtooth";
+        osc.frequency.value = f;
+        gain.gain.setValueAtTime(0, t0 + debut);
+        gain.gain.linearRampToValueAtTime(0.3, t0 + debut + 0.005);
+        gain.gain.setTargetAtTime(0, t0 + debut + duree, 0.03);
+        osc.connect(gain).connect(disto);
+        osc.start(t0 + debut);
+        osc.stop(t0 + debut + duree + 0.2);
+      }
+    }
+  }
+
   // Rien à précalculer en 8 bits : on crée seulement le contexte audio à l'avance
   function preparer() {
     if (active) initialiser();
@@ -293,5 +336,5 @@ const Musique = (() => {
     return active;
   }
 
-  return { jouer, arreter, suspendre, basculer, preparer, estActive: () => active, MORCEAUX };
+  return { jouer, arreter, suspendre, basculer, preparer, riff, estActive: () => active, MORCEAUX };
 })();
