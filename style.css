@@ -582,6 +582,59 @@ body.jeu-plein-ecran {
   overflow: hidden;
 }
 
+/* ---------- Écran des règles et des cadeaux ---------- */
+
+#ecran-regles {
+  justify-content: flex-start;
+}
+
+.contenu-regles {
+  margin: auto 0;
+  max-width: 600px;
+  text-align: left;
+  font-size: 0.85rem;
+  line-height: 1.35;
+}
+
+.contenu-regles h3 {
+  text-align: center;
+  margin-bottom: 0.4rem;
+}
+
+.contenu-regles h4 {
+  color: var(--accent);
+  margin: 0.6rem 0 0.2rem;
+}
+
+.contenu-regles ul {
+  padding-left: 1.2rem;
+}
+
+.contenu-regles li {
+  margin: 0.15rem 0;
+}
+
+.contenu-regles .note-regles {
+  font-size: 0.8rem;
+  opacity: 0.8;
+  margin-top: 0.4rem;
+}
+
+.contenu-regles button {
+  display: block;
+  margin: 0.6rem auto 0;
+}
+
+#ecran-selection .bouton-secondaire {
+  margin-top: 0;
+}
+
+@media (max-width: 520px) {
+  .contenu-regles {
+    font-size: 0.75rem;
+  }
+}
+
 #regles ul {
   list-style: none;
   background: var(--carte);

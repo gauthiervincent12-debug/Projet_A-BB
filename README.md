@@ -35,6 +35,13 @@ Déposer la vidéo dans `videos/annonce.mp4` (format MP4 / H.264, quelques dizai
 
 ⚠️ Le dépôt et le site sont publics : une fois en ligne, la vidéo peut être vue par toute personne qui connaît son adresse, même sans jouer.
 
+## Règles et cadeaux
+
+Au début de la première partie sur un appareil, un écran « Règles du jeu » résume le jeu et annonce les cadeaux ; on le relit avec le bouton « 📜 Règles et cadeaux » de l'écran de départ. Pour chaque niveau (Facile, Moyen et Difficile) :
+
+- **le pronostic** : un cadeau pour celui ou celle qui trouve le sexe du bébé du premier coup, avec le meilleur temps (seul le premier essai compte) ;
+- **le score** : un cadeau pour celui ou celle qui marque le plus de points ; à égalité, le meilleur chrono l'emporte.
+
 ## Scores
 
 Le prénom, le nom, le score, le temps, la difficulté, le résultat et la réponse sont enregistrés dans le **navigateur** (`localStorage`). Ils ne sont pas affichés aux joueurs.
@@ -48,6 +55,8 @@ Ouvrir `admin.html` (aucun lien depuis le jeu) : résumé (parties, arrivées, n
 Sans feuille Google Sheets, le backoffice ne voit que les parties jouées **dans le même navigateur**. Avec la feuille, saisir le mot de passe (`CLE_ADMIN` du script Google) pour charger les parties de tous les joueurs.
 
 Tétines : +10 · Animal écrasé : +50 (sauf les hérissons, qui piquent) · Biberon : +20 · Animal touché par un jet de lait : +50 · Bonus d'arrivée : +100 par vie restante.
+
+Grotte : au pied de la montagne, en continuant tout droit au lieu de sauter sur le premier rocher, le chemin descend d'une marche et entre dans la paroi. La salle, sous les deux premiers rochers, n'apparaît qu'une fois dedans. Le reblochon, au fond, fait grandir le personnage d'environ 40 % (+30 points) jusqu'à la fin de la partie. On ressort en revenant sur ses pas et en sautant la marche.
 
 Biberon : il flotte en hauteur à la fin des collines (on l'attrape en sautant depuis la dernière planche). Une fois pris, la touche X (ou F, ou le bouton 🍼 sur mobile) tire du lait qui élimine les animaux, hérissons compris.
 

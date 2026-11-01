@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Annonce du sexe de bébé — L'Ascension</title>
-  <link rel="stylesheet" href="style.css?v=202611012103">
+  <link rel="stylesheet" href="style.css?v=202611012203">
 </head>
 <body>
   <header>
@@ -59,6 +59,27 @@
             </button>
           </div>
           <p class="aide">← → pour avancer · Espace pour sauter</p>
+          <button id="bouton-voir-regles" class="bouton-secondaire">📜 Règles et cadeaux</button>
+        </div>
+
+        <!-- Règles et cadeaux : affichés au début de la première partie, puis sur demande -->
+        <div id="ecran-regles" class="ecran cache">
+          <div class="contenu-regles">
+            <h3>📜 Règles du jeu</h3>
+            <p>Traverse les collines, le lac et les montagnes, puis rejoins la poussette pour répondre : <strong>fille ou garçon ?</strong></p>
+            <ul>
+              <li>← → pour avancer, Espace pour sauter (boutons à l'écran sur mobile). Tu as 4 vies ❤️.</li>
+              <li>L'eau, les ravins et les animaux touchés de côté font perdre une vie. Saute sur les animaux pour les écraser… sauf les hérissons, qui piquent !</li>
+              <li>Tétine +10, animal écrasé +50, et +100 par vie restante à l'arrivée. Cherche aussi le biberon 🍼 et la grotte 🧀 !</li>
+            </ul>
+            <h4>🎁 Les cadeaux, pour chaque niveau (Facile, Moyen et Difficile)</h4>
+            <ul>
+              <li>🍼 <strong>Le pronostic</strong> : un cadeau pour celui ou celle qui trouve le sexe du bébé <strong>du premier coup</strong>, avec le meilleur temps. Seul ton premier essai compte !</li>
+              <li>🏆 <strong>Le score</strong> : un cadeau pour celui ou celle qui marque <strong>le plus de points</strong> ; à égalité, le meilleur chrono l'emporte.</li>
+            </ul>
+            <p class="note-regles">Utilise toujours le même prénom et le même nom pour que tes parties soient bien comptées.</p>
+            <button id="bouton-regles">C'est parti !</button>
+          </div>
         </div>
 
         <div id="ecran-message" class="ecran cache">
@@ -92,7 +113,7 @@
         <div class="modale-contenu">
           <h3 id="photo-titre"></h3>
           <!-- Vidéo de l'annonce : déposer le fichier videos/annonce.mp4 -->
-          <video id="video-annonce" src="videos/annonce.mp4?v=202611012103" controls playsinline preload="none"></video>
+          <video id="video-annonce" src="videos/annonce.mp4?v=202611012203" controls playsinline preload="none"></video>
           <p id="video-absente" class="video-absente cache">🎬 La vidéo arrive bientôt…</p>
           <button id="bouton-fermer-photo">Rejouer</button>
         </div>
@@ -102,10 +123,17 @@
     <section id="regles">
       <h2>Règles</h2>
       <ul>
+        <li>🎁 <strong>Les cadeaux, pour chaque niveau (Facile, Moyen et Difficile)</strong> :
+          <ul>
+            <li>🍼 <strong>Le pronostic</strong> : un cadeau pour celui ou celle qui trouve le sexe du bébé <strong>du premier coup</strong>, avec le meilleur temps. Seul ton premier essai compte !</li>
+            <li>🏆 <strong>Le score</strong> : un cadeau pour celui ou celle qui marque <strong>le plus de points</strong> ; à égalité, le meilleur chrono l'emporte.</li>
+          </ul>
+        </li>
         <li>🌄 Traverse les <strong>collines</strong>, franchis le <strong>lac</strong> sur les pontons, puis gravis les <strong>montagnes</strong> : passe le drapeau du sommet et rejoins la poussette !</li>
         <li>📋 Ton score, ton temps, ton personnage et ta réponse sont enregistrés avec ton prénom et ton nom.</li>
         <li>🍼 Tétine : +10 points · Animal écrasé en sautant dessus : +50 points (🐇 lièvre et 🦊 renard dans les collines, 🦫 castor au lac, chamois et marmotte dans l'herbe de la montagne, 🐐 bouquetin dans la neige)</li>
         <li>🍼 À la fin des collines, un biberon flotte en hauteur : attrape-le pour tirer du lait sur les animaux (touche <kbd>X</kbd>, ou le bouton 🍼 sur mobile). Même les hérissons y passent !</li>
+        <li>🕳️ Au pied de la montagne, ne saute pas sur le premier rocher : continue tout droit, le chemin descend dans une grotte où un reblochon t'attend… et te fait grandir ! Reviens sur tes pas et saute pour ressortir.</li>
         <li>🦔 Attention aux hérissons : ils piquent ! Leur sauter dessus fait perdre une vie, il faut les éviter.</li>
         <li>💧 Tomber dans l'eau ou dans un ravin, ou toucher un animal de côté : −1 vie</li>
         <li>🚩 Les balises vertes sont des points de reprise.</li>
@@ -122,8 +150,8 @@
     <p>Développé par Céline et Vincent avec leur pote l'IA Claude Code 😉</p>
   </footer>
 
-  <script src="config.js?v=202611012103"></script>
-  <script src="musique.js?v=202611012103"></script>
-  <script src="script.js?v=202611012103"></script>
+  <script src="config.js?v=202611012203"></script>
+  <script src="musique.js?v=202611012203"></script>
+  <script src="script.js?v=202611012203"></script>
 </body>
 </html>

@@ -30,6 +30,8 @@ const sectionJeu = document.getElementById("jeu");
 const boutonPleinEcran = document.getElementById("bouton-plein-ecran");
 const boutonMusique = document.getElementById("bouton-musique");
 const boutonTir = document.getElementById("bouton-tir");
+const ecranRegles = document.getElementById("ecran-regles");
+const boutonRegles = document.getElementById("bouton-regles");
 
 // Réglages
 const GRAVITE = 0.6;
@@ -43,6 +45,14 @@ const DRAPEAU = { x: 6100, y: -150 };
 const POUSSETTE = { x: 6330, y: -150 };
 const POINTS_REPRISE = [80, 2300, 3950];
 const VIES_DEPART = 4;
+// Grotte sous la montagne, au niveau du chemin : en allant tout droit (sans sauter sur le premier
+// rocher), on descend une marche puis on entre dans la paroi. La salle court sous les deux premiers rochers.
+// entree : début de la marche ; x : paroi de la montagne ; fin : fond de la salle ;
+// plafond : dessous des rochers au-dessus de la salle ; sol : sol du chemin creusé et de la salle
+const GROTTE = { entree: 4250, x: 4300, fin: 4600, plafond: 370, sol: SOL + 40 };
+const REBLOCHON = { x: 4555, y: GROTTE.sol - 22 };
+const GRANDISSEMENT = 1.4;
+
 // Biberon bonus, en hauteur à la fin des collines : on l'attrape en sautant depuis la dernière planche
 const BIBERON = { x: 2230, y: 166 };
 const TIR = { vitesse: 9, portee: 55, recharge: 18 };
@@ -181,7 +191,10 @@ function creerNiveau(difficulte) {
   }
 
   // Les Montagnes
-  plateformes.push(colonne(3850, SOL, 450, "herbe"));
+  plateformes.push(
+    colonne(3850, SOL, GROTTE.entree - 3850, "herbe"),
+    colonne(GROTTE.entree, GROTTE.sol, GROTTE.fin - GROTTE.entree, "grotte")
+  );
   const rochers = [
     [4300, 350, 160], [4460, 300, 140], [4600, 245, 130], [4800, 190, 150], [4950, 135, 120],
     [5140, 80, 150], [5290, 20, 130], [5420, -40, 140], [5640, -100, 140], [5780, -150, FIN_MONDE - 5780],
@@ -189,7 +202,12 @@ function creerNiveau(difficulte) {
   rochers.forEach(([x, y, w], i) => {
     // En facile, chaque rocher rejoint le suivant : plus de ravins
     const largeur = facile && i < rochers.length - 1 ? rochers[i + 1][0] - x : w;
-    plateformes.push(colonne(x, y, largeur, "roche"));
+    // Au-dessus de la grotte, les rochers ne sont qu'une dalle : la salle est creusée dessous
+    plateformes.push(
+      x < GROTTE.fin
+        ? { x, y, w: largeur, h: GROTTE.plafond - y, type: "roche", dx: 0, dy: 0 }
+        : colonne(x, y, largeur, "roche")
+    );
   });
 
   // Ennemis : [x, sol, limite gauche, limite droite, espèce (au hasard selon la zone si absente)]
@@ -198,12 +216,12 @@ function creerNiveau(difficulte) {
     ? [
         [650, SOL, 300, 950, "lievre"],
         [1450, SOL, 1150, 1650, "renard"],
-        [4050, SOL, 3900, 4290, "chamois"],
+        [4050, SOL, 3900, GROTTE.entree, "chamois"],
         [5900, -150, 5800, 6060, "bouquetin"],
       ]
     : [
         [650, SOL, 300, 950],
-        [4050, SOL, 3900, 4290],
+        [4050, SOL, 3900, GROTTE.entree],
         [1450, SOL, 1150, 1650],
         [2150, SOL, 1850, 2350],
         [4830, 190, 4800, 4950],
@@ -241,7 +259,12 @@ function creerNiveau(difficulte) {
     for (let i = 0; i < n; i++) pieces.push({ x: x + i * 34, y, prise: false });
   }
 
-  return { plateformes, ennemis, pieces, biberon: { ...BIBERON, pris: false }, tirs: [] };
+  return {
+    plateformes, ennemis, pieces, tirs: [],
+    biberon: { ...BIBERON, pris: false },
+    reblochon: { ...REBLOCHON, pris: false },
+    grotteVisible: 0,
+  };
 }
 
 function creerJoueur() {
@@ -249,7 +272,7 @@ function creerJoueur() {
     x: POINTS_REPRISE[0], y: SOL - 44, w: 26, h: 44,
     vx: 0, vy: 0, auSol: false, support: null,
     direction: 1, anim: 0, horsSol: 0, invulnerable: 0,
-    biberon: false, recharge: 0,
+    biberon: false, recharge: 0, echelle: 1, echelleCible: 1,
   };
 }
 
@@ -518,6 +541,19 @@ function mettreAJour(dt) {
 
   const j = joueur;
 
+  // Après le reblochon, le personnage grandit en douceur, les pieds restent au sol
+  if (j.echelle < j.echelleCible) {
+    j.echelle = Math.min(j.echelleCible, j.echelle + 0.02 * dt);
+    const w = 26 * j.echelle;
+    const h = 44 * j.echelle;
+    // Un centième de pixel au-dessus du sol : sinon le personnage « mord » dans le sol et en est éjecté
+    const pieds = j.y + j.h;
+    j.x -= (w - j.w) / 2;
+    j.w = w;
+    j.h = h;
+    j.y = pieds - h - 0.01;
+  }
+
   // Le joueur est emporté par la plateforme sur laquelle il se tient
   if (j.support) {
     j.x += j.support.dx;
@@ -613,7 +649,7 @@ function mettreAJour(dt) {
     j.recharge -= dt;
     if (tirMaintenu() && j.recharge <= 0) {
       niveau.tirs.push({
-        x: j.x + j.w / 2 + j.direction * BOUT_BIBERON - (j.direction > 0 ? 0 : 10), y: j.y + 18, w: 10, h: 7,
+        x: j.x + j.w / 2 + j.direction * BOUT_BIBERON * j.echelle - (j.direction > 0 ? 0 : 10), y: j.y + 18 * j.echelle, w: 10, h: 7,
         vx: TIR.vitesse * j.direction, vie: TIR.portee,
       });
       j.recharge = TIR.recharge;
@@ -633,6 +669,19 @@ function mettreAJour(dt) {
     }
   }
   niveau.tirs = niveau.tirs.filter((t) => t.vie > 0);
+
+  // Grotte : l'intérieur apparaît quand on y entre, et disparaît quand on en sort
+  const dansLaGrotte = j.x + j.w > GROTTE.x + 4 && j.x < GROTTE.fin && j.y + j.h > SOL + 2;
+  niveau.grotteVisible += ((dansLaGrotte ? 1 : 0) - niveau.grotteVisible) * Math.min(1, 0.15 * dt);
+
+  // Reblochon : le personnage grandit d'environ 40 %
+  const r = niveau.reblochon;
+  if (!r.pris && j.x < r.x + 13 && j.x + j.w > r.x - 13 && j.y + j.h > r.y - 13 && j.y < r.y + 13) {
+    r.pris = true;
+    j.echelleCible = GRANDISSEMENT;
+    ajouterScore(30);
+    banniere = { texte: "🧀 Reblochon : tu grandis !", duree: 150 };
+  }
 
   // Pièces
   for (const p of niveau.pieces) {
@@ -662,7 +711,8 @@ function mettreAJour(dt) {
 
   // Caméra
   camX = Math.max(0, Math.min(FIN_MONDE - W, j.x - W * 0.4));
-  const cibleY = Math.min(0, j.y - H * 0.55);
+  // La caméra descend un peu quand on est dans la grotte, pour voir toute la salle
+  const cibleY = Math.min(niveau.grotteVisible > 0.5 ? 50 : 0, j.y - H * 0.55);
   camY += (cibleY - camY) * Math.min(1, 0.1 * dt);
 
   if (j.x + j.w >= POUSSETTE.x) finDePartie(true);
@@ -927,6 +977,25 @@ function dessinerAnnecy(x, rive) {
   toitPointu(x + 44, solChateau - 32, 14, 9, ardoise);
   fenetres(x + 4, solChateau - 28, 11, 28);
   fenetres(x + 44, solChateau - 32, 14, 32);
+
+  // Drapeau de la Savoie (rouge à croix blanche) au sommet de la grosse tour, qui flotte au vent
+  const mat = x + 51;
+  const pointe = solChateau - 41;
+  ctx.fillStyle = "#3a3a3a";
+  ctx.fillRect(mat - 0.5, pointe - 13, 1, 13);
+  const vent = Math.sin(temps * 0.12) * 1.2;
+  const drapeau = { x: mat + 0.5, y: pointe - 13, l: 10, h: 7 };
+  ctx.fillStyle = "#d52b1e";
+  ctx.beginPath();
+  ctx.moveTo(drapeau.x, drapeau.y);
+  ctx.quadraticCurveTo(drapeau.x + drapeau.l / 2, drapeau.y + vent, drapeau.x + drapeau.l, drapeau.y);
+  ctx.lineTo(drapeau.x + drapeau.l, drapeau.y + drapeau.h);
+  ctx.quadraticCurveTo(drapeau.x + drapeau.l / 2, drapeau.y + drapeau.h + vent, drapeau.x, drapeau.y + drapeau.h);
+  ctx.fill();
+  ctx.fillStyle = "#ffffff";
+  // La croix de Savoie touche les bords du drapeau (contrairement au drapeau suisse)
+  ctx.fillRect(drapeau.x + drapeau.l / 2 - 0.9, drapeau.y + vent * 0.5, 1.8, drapeau.h);
+  ctx.fillRect(drapeau.x, drapeau.y + drapeau.h / 2 - 0.9 + vent * 0.5, drapeau.l, 1.8);
 
   // Maisons de la vieille ville
   for (const [dx, largeur, hauteur, couleur] of VIEILLE_VILLE) {
@@ -1252,11 +1321,18 @@ function dessinerMaison(x, sol) {
 }
 
 function dessinerPlateforme(p) {
+  if (p.type === "grotte") {
+    ctx.fillStyle = "#3b302a";
+    ctx.fillRect(p.x, p.y, p.w, p.h);
+    ctx.fillStyle = "#5a4a3f";
+    ctx.fillRect(p.x, p.y, p.w, 5);
+    return;
+  }
   if (p.type === "herbe") {
     ctx.fillStyle = "#8d5a2b";
     ctx.fillRect(p.x, p.y, p.w, p.h);
     ctx.fillStyle = "#7a4b22";
-    for (let x = p.x + 20; x < p.x + p.w; x += 60) ctx.fillRect(x, p.y + 30 + (x % 40), 8, 6);
+    if (p.h > 60) for (let x = p.x + 20; x < p.x + p.w; x += 60) ctx.fillRect(x, p.y + 30 + (x % 40), 8, 6);
     ctx.fillStyle = "#4caf50";
     ctx.fillRect(p.x, p.y, p.w, 12);
     ctx.fillStyle = "#3e9142";
@@ -1290,6 +1366,265 @@ function dessinerBalise(x, active) {
 }
 
 // Tétine pour bébé : tétine, collerette et anneau, qui flotte doucement
+// ---------- Grotte ----------
+
+const ARCHE = { gauche: GROTTE.x, largeur: 46 };
+
+function tracerArche(marge = 0) {
+  const rayon = ARCHE.largeur / 2 + marge;
+  const centre = ARCHE.gauche + ARCHE.largeur / 2;
+  const naissance = GROTTE.plafond + ARCHE.largeur / 2;
+  ctx.beginPath();
+  ctx.moveTo(centre - rayon, GROTTE.sol);
+  ctx.lineTo(centre - rayon, naissance);
+  ctx.arc(centre, naissance, rayon, Math.PI, 0);
+  ctx.lineTo(centre + rayon, GROTTE.sol);
+}
+
+// Intérieur de la salle : paroi sombre, pierres, stalactites et rayon de lumière venu de l'entrée
+function dessinerGrotteFond() {
+  const { x, fin, plafond, sol } = GROTTE;
+  if (!visible(x, fin - x)) return;
+  ctx.fillStyle = "#2b211c";
+  ctx.fillRect(x, plafond, fin - x, sol - plafond);
+  ctx.fillStyle = "#3a2e27";
+  for (const [px, py, rx, ry] of [[4340, 420, 14, 9], [4420, 395, 10, 7], [4490, 430, 16, 10], [4580, 400, 9, 12]]) {
+    ctx.beginPath();
+    ctx.ellipse(px, py, rx, ry, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.fillStyle = "#4a3c33";
+  for (const [px, longueur] of [[4325, 12], [4360, 8], [4395, 16], [4440, 10], [4480, 14], [4520, 8], [4585, 12]]) {
+    ctx.beginPath();
+    ctx.moveTo(px - 4, plafond);
+    ctx.lineTo(px + 4, plafond);
+    ctx.lineTo(px, plafond + longueur);
+    ctx.fill();
+  }
+  // Lumière du jour qui entre par l'ouverture et s'éteint vers le fond
+  const lumiere = ctx.createLinearGradient(x, 0, x + 180, 0);
+  lumiere.addColorStop(0, "rgba(255, 240, 200, 0.25)");
+  lumiere.addColorStop(1, "rgba(255, 240, 200, 0)");
+  ctx.fillStyle = lumiere;
+  ctx.fillRect(x, plafond, 180, sol - plafond);
+}
+
+// Entrée : chemin creusé, puis grande arche de pierres claires bien visible sur la paroi
+function dessinerEntreeGrotte() {
+  const { entree, x, sol } = GROTTE;
+  if (!visible(entree - 10, 120)) return;
+  // Paroi de terre au fond du chemin creusé, plus sombre vers le bas
+  const terre = ctx.createLinearGradient(0, SOL, 0, sol);
+  terre.addColorStop(0, "#7a4b22");
+  terre.addColorStop(1, "#4a2d14");
+  ctx.fillStyle = terre;
+  ctx.fillRect(entree, SOL, x - entree, sol - SOL);
+  ctx.fillStyle = "#6d4520";
+  ctx.fillRect(entree, SOL, 4, sol - SOL);
+
+  // Pierres de l'arche : épais contour clair, joints plus sombres
+  ctx.lineJoin = "round";
+  ctx.strokeStyle = "#b9bcc6";
+  ctx.lineWidth = 10;
+  tracerArche(5);
+  ctx.stroke();
+  ctx.strokeStyle = "#8c8f9a";
+  ctx.lineWidth = 2;
+  const centre = ARCHE.gauche + ARCHE.largeur / 2;
+  const naissance = GROTTE.plafond + ARCHE.largeur / 2;
+  const rayon = ARCHE.largeur / 2 + 5;
+  for (let i = 0; i <= 6; i++) {
+    const angle = Math.PI + (i / 6) * Math.PI;
+    ctx.beginPath();
+    ctx.moveTo(centre + Math.cos(angle) * (rayon - 5), naissance + Math.sin(angle) * (rayon - 5));
+    ctx.lineTo(centre + Math.cos(angle) * (rayon + 5), naissance + Math.sin(angle) * (rayon + 5));
+    ctx.stroke();
+  }
+  for (const cote of [-1, 1]) {
+    for (let py = naissance + 14; py < sol; py += 14) {
+      ctx.beginPath();
+      ctx.moveTo(centre + cote * (rayon - 5), py);
+      ctx.lineTo(centre + cote * (rayon + 5), py);
+      ctx.stroke();
+    }
+  }
+
+  // Touffes de mousse sur la voûte
+  ctx.fillStyle = "#6f9a3c";
+  for (const [dx, dy, r] of [[-14, -27, 4], [-4, -31, 5], [8, -30, 4], [17, -24, 3]]) {
+    ctx.beginPath();
+    ctx.arc(centre + dx, naissance + dy, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+// Tant qu'on est dehors, la roche cache la salle : on ne voit que l'ouverture noire sous l'arche
+function dessinerGrotteCachee() {
+  const { x, fin, plafond, sol } = GROTTE;
+  const opacite = 1 - niveau.grotteVisible;
+  if (opacite < 0.01 || !visible(x, fin - x)) return;
+  ctx.save();
+  ctx.globalAlpha = opacite;
+  const bas = LIMITE_CHUTE + 100;
+  ctx.fillStyle = "#7d7f8a";
+  ctx.fillRect(x, plafond, fin - x, bas - plafond);
+  ctx.fillStyle = "#6a6c76";
+  for (let py = plafond + 30; py < bas; py += 45) ctx.fillRect(x + 60 + Math.abs(py % 40), py, 30, 5);
+  // Ouverture : noir profond, à peine éclairé en bas
+  const ombre = ctx.createLinearGradient(0, plafond, 0, sol);
+  ombre.addColorStop(0, "#0b0705");
+  ombre.addColorStop(1, "#24170f");
+  ctx.fillStyle = ombre;
+  tracerArche();
+  ctx.fill();
+  ctx.restore();
+}
+
+// Reblochon (d'après images/rebl.jpg) : meule vue de trois quarts, dessus blanc poudré à la trame
+// croisée, croûte orangée sur le tour, une part découpée devant qui montre la pâte jaune à petits trous,
+// et la part posée à côté. Il flotte au-dessus du sol ; (x, y) = son centre.
+function dessinerReblochon(x, y) {
+  const flotte = Math.sin(temps * 0.07) * 3;
+  const rx = 15;
+  const ry = 6;
+  const haut = -3;
+  const epaisseur = 9;
+  const pate = "#f5d77c";
+  const pateOmbre = "#e9c25f";
+  const trou = "#d9ad48";
+  const poudre = "#f6efe4";
+  const croute = "#e2a066";
+  // Point du bord de la meule, à l'angle a (vers l'avant quand sin(a) = 1), descendu de dy
+  const bord = (angle, dy = 0) => [Math.cos(angle) * rx, haut + Math.sin(angle) * ry + dy];
+  const debutPart = 1.75;
+  const finPart = 2.75;
+
+  // Ombre sur le sol de la salle
+  ctx.fillStyle = "rgba(0, 0, 0, 0.35)";
+  ctx.beginPath();
+  ctx.ellipse(x, GROTTE.sol - 1, 15 - flotte, 3.5, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.save();
+  ctx.translate(x, y + flotte);
+  const halo = ctx.createRadialGradient(0, 0, 4, 0, 0, 30);
+  halo.addColorStop(0, "rgba(255, 230, 150, 0.5)");
+  halo.addColorStop(1, "rgba(255, 230, 150, 0)");
+  ctx.fillStyle = halo;
+  ctx.beginPath();
+  ctx.arc(0, 0, 30, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Silhouette de la part manquante : centre, arc du dessus, arc du dessous
+  const tracerPart = () => {
+    ctx.moveTo(0, haut);
+    for (let t = debutPart; t <= finPart + 0.001; t += 0.1) ctx.lineTo(...bord(t));
+    for (let t = finPart; t >= debutPart - 0.001; t -= 0.1) ctx.lineTo(...bord(t, epaisseur));
+    ctx.lineTo(0, haut + epaisseur);
+    ctx.closePath();
+  };
+
+  // Meule entière, sauf la part découpée
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(-40, -40, 80, 80);
+  tracerPart();
+  ctx.clip("evenodd");
+  // Tour de la meule : croûte orangée, un peu poudrée
+  const tour = ctx.createLinearGradient(0, haut, 0, haut + ry + epaisseur);
+  tour.addColorStop(0, "#efc59a");
+  tour.addColorStop(1, "#d98f52");
+  ctx.fillStyle = tour;
+  ctx.beginPath();
+  ctx.ellipse(0, haut + epaisseur, rx, ry, 0, 0, Math.PI);
+  ctx.lineTo(-rx, haut);
+  ctx.ellipse(0, haut, rx, ry, 0, Math.PI, 0, true);
+  ctx.closePath();
+  ctx.fill();
+  // Dessus poudré blanc, bordé d'orange, avec la trame croisée de la toile
+  ctx.fillStyle = poudre;
+  ctx.beginPath();
+  ctx.ellipse(0, haut, rx, ry, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = croute;
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  ctx.save();
+  ctx.clip();
+  ctx.strokeStyle = "rgba(205, 170, 140, 0.22)";
+  ctx.lineWidth = 0.5;
+  for (let d = -24; d <= 24; d += 3) {
+    ctx.beginPath();
+    ctx.moveTo(d - 8, haut - 8);
+    ctx.lineTo(d + 8, haut + 8);
+    ctx.moveTo(d + 8, haut - 8);
+    ctx.lineTo(d - 8, haut + 8);
+    ctx.stroke();
+  }
+  ctx.restore();
+  ctx.restore();
+
+  // Faces de la coupe : pâte jaune pâle à petits trous
+  const [ax, ay] = bord(debutPart);
+  const [bx, by] = bord(finPart);
+  ctx.fillStyle = pateOmbre;
+  ctx.beginPath();
+  ctx.moveTo(0, haut);
+  ctx.lineTo(bx, by);
+  ctx.lineTo(bx, by + epaisseur);
+  ctx.lineTo(0, haut + epaisseur);
+  ctx.fill();
+  ctx.fillStyle = pate;
+  ctx.beginPath();
+  ctx.moveTo(0, haut);
+  ctx.lineTo(ax, ay);
+  ctx.lineTo(ax, ay + epaisseur);
+  ctx.lineTo(0, haut + epaisseur);
+  ctx.fill();
+  ctx.fillStyle = croute;
+  ctx.fillRect(ax - 1, ay, 1.5, epaisseur);
+  ctx.fillStyle = trou;
+  for (const [tx, ty] of [[-1.5, 1], [-3, 4], [-0.8, 3.5], [-6, 2], [-8, 4]]) ctx.fillRect(tx, ty, 1.2, 1.2);
+
+  // La part coupée, posée à gauche : dessus poudré, pâte jaune devant, croûte orangée au dos
+  ctx.translate(-21, 6);
+  ctx.fillStyle = poudre;
+  ctx.beginPath();
+  ctx.moveTo(8, -3);
+  ctx.lineTo(-7, -6);
+  ctx.lineTo(-9, -1);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = pate;
+  ctx.beginPath();
+  ctx.moveTo(8, -3);
+  ctx.lineTo(-9, -1);
+  ctx.lineTo(-9, 6);
+  ctx.lineTo(8, 4);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = croute;
+  ctx.beginPath();
+  ctx.moveTo(-7, -6);
+  ctx.lineTo(-9, -1);
+  ctx.lineTo(-9, 6);
+  ctx.lineTo(-10.5, 5);
+  ctx.lineTo(-9, -5);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillRect(-9, -1, 17, 1);
+  ctx.fillStyle = trou;
+  for (const [tx, ty] of [[-4, 2], [0, 1], [3, 3], [-6, 4], [1, -0.5]]) ctx.fillRect(tx, ty, 1.2, 1.2);
+
+  // Petite étincelle
+  ctx.translate(21, -6);
+  const eclat = (Math.sin(temps * 0.12) + 1) / 2;
+  ctx.fillStyle = `rgba(255, 255, 255, ${eclat})`;
+  ctx.fillRect(13, -17, 2, 6);
+  ctx.fillRect(11, -15, 6, 2);
+  ctx.restore();
+}
+
 // Biberon : tétine, bague bleue et lait ; (x, y) = son centre. Dans le niveau, il flotte et brille.
 function dessinerBiberon(x, y, dansLeNiveau) {
   ctx.save();
@@ -2258,6 +2593,7 @@ function dessiner() {
   ctx.save();
   ctx.translate(-Math.round(camX), -Math.round(camY));
   dessinerRoseaux();
+  dessinerGrotteFond();
   for (const p of niveau.plateformes) if (visible(p.x, p.w)) dessinerPlateforme(p);
   POINTS_REPRISE.forEach((x, i) => {
     if (i > 0 && visible(x, 30)) dessinerBalise(x, i <= pointReprise);
@@ -2266,12 +2602,19 @@ function dessiner() {
   for (const e of niveau.ennemis) if (!e.mort && visible(e.x, e.w)) dessinerEnnemi(e);
   const b = niveau.biberon;
   if (!b.pris && visible(b.x - 20, 40)) dessinerBiberon(b.x, b.y, true);
+  if (!niveau.reblochon.pris && visible(REBLOCHON.x - 20, 40)) dessinerReblochon(REBLOCHON.x, REBLOCHON.y);
+  dessinerGrotteCachee();
+  dessinerEntreeGrotte();
   for (const t of niveau.tirs) dessinerTir(t);
   dessinerDrapeau();
   dessinerPoussette();
   const j = joueur;
   if (j.invulnerable <= 0 || Math.floor(j.invulnerable / 5) % 2 === 0) {
-    dessinerPersonnage(ctx, j.x, j.y, perso, j.direction, j.anim, !j.auSol, j.biberon);
+    ctx.save();
+    ctx.translate(j.x, j.y);
+    ctx.scale(j.echelle, j.echelle);
+    dessinerPersonnage(ctx, 0, 0, perso, j.direction, j.anim, !j.auSol, j.biberon);
+    ctx.restore();
   }
   dessinerEau();
   dessinerGrenouille();
@@ -2354,9 +2697,35 @@ document.querySelectorAll(".carte-perso").forEach((carte) => {
     }
     erreurIdentite.classList.add("cache");
     ecrireStockage("abb-joueur", { prenom, nom });
+    // Première partie sur cet appareil : on affiche d'abord les règles et les cadeaux
+    if (!lireStockage("abb-regles-lues", false)) return afficherRegles(carte.dataset.perso);
     demarrer(carte.dataset.perso);
   });
 });
+
+// ---------- Règles et cadeaux ----------
+
+let persoEnAttente = null;
+
+// Avec un personnage : les règles précèdent la partie (« C'est parti ! ») ; sans : simple relecture (« Retour »)
+function afficherRegles(choix = null) {
+  persoEnAttente = choix;
+  boutonRegles.textContent = choix ? "C'est parti !" : "Retour";
+  ecranSelection.classList.add("cache");
+  ecranRegles.classList.remove("cache");
+  ecranRegles.scrollTop = 0;
+  boutonRegles.focus({ preventScroll: true });
+}
+
+boutonRegles.addEventListener("click", () => {
+  ecrireStockage("abb-regles-lues", true);
+  ecranRegles.classList.add("cache");
+  if (persoEnAttente) demarrer(persoEnAttente);
+  else ecranSelection.classList.remove("cache");
+  persoEnAttente = null;
+});
+
+document.getElementById("bouton-voir-regles").addEventListener("click", () => afficherRegles());
 
 document.querySelectorAll("[data-reponse]").forEach((bouton) => {
   bouton.addEventListener("click", () => repondre(bouton.dataset.reponse));
