@@ -27,11 +27,13 @@ Ouvrir `index.html` dans un navigateur. Aucune installation n'est nécessaire.
    - **Les Collines** : prairies vertes, quelques ravins et des hérissons ;
    - **Le Lac** : sauter de ponton en ponton (certains bougent), sans tomber à l'eau ;
    - **Les Montagnes** : gravir les rochers, passer le drapeau du sommet et rejoindre la poussette.
-5. À la poussette : répondre à « Alors fille ou garçon ? ». La réponse est enregistrée et la photo `images/photo.jpg` s'affiche.
+5. À la poussette : répondre à « Alors fille ou garçon ? ». La réponse est enregistrée et la vidéo `videos/annonce.mp4` se lance.
 
-## Photo de fin
+## Vidéo de fin
 
-`images/photo.jpg` est une image temporaire : la remplacer par la vraie photo en gardant le même nom (`photo.jpg`).
+Déposer la vidéo dans `videos/annonce.mp4` (format MP4 / H.264, quelques dizaines de Mo au plus : GitHub refuse les fichiers de plus de 100 Mo), puis changer le numéro `?v=…` (voir plus bas, il suit aussi le nom de la vidéo) et faire un commit / push. Tant que le fichier n'est pas là, le message « La vidéo arrive bientôt… » s'affiche à sa place.
+
+⚠️ Le dépôt et le site sont publics : une fois en ligne, la vidéo peut être vue par toute personne qui connaît son adresse, même sans jouer.
 
 ## Scores
 

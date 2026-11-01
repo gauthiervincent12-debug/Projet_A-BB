@@ -24,6 +24,8 @@ const questionTexte = document.getElementById("question-texte");
 const modalePhoto = document.getElementById("modale-photo");
 const photoTitre = document.getElementById("photo-titre");
 const boutonFermerPhoto = document.getElementById("bouton-fermer-photo");
+const videoAnnonce = document.getElementById("video-annonce");
+const videoAbsente = document.getElementById("video-absente");
 const sectionJeu = document.getElementById("jeu");
 const boutonPleinEcran = document.getElementById("bouton-plein-ecran");
 
@@ -418,9 +420,37 @@ function repondre(reponse) {
   photoTitre.textContent = `${partieActuelle.prenom}, tu as répondu : ${reponse === "fille" ? "une fille 👧" : "un garçon 👦"} !`;
   modalePhoto.classList.remove("cache");
   boutonFermerPhoto.focus();
+  lancerVideo();
 }
 
+// Vidéo de l'annonce, lue depuis le début (le clic sur la réponse autorise le son).
+// Tant que videos/annonce.mp4 n'est pas déposée, un message d'attente la remplace.
+function lancerVideo() {
+  videoAnnonce.hidden = false;
+  videoAbsente.classList.add("cache");
+  videoAnnonce.currentTime = 0;
+  videoAnnonce.play().catch((e) => {
+    // Fichier absent ou illisible : message d'attente. Sinon (lecture automatique
+    // refusée), les contrôles restent disponibles pour la lancer à la main.
+    if (videoAnnonce.error || e.name === "NotSupportedError") afficherVideoAbsente();
+  });
+  // En parallèle (pour ne pas retarder la lecture), vérifie que le fichier existe
+  fetch(videoAnnonce.src, { method: "HEAD", cache: "no-store" })
+    .then((r) => {
+      if (!r.ok) afficherVideoAbsente();
+    })
+    .catch(() => {});
+}
+
+function afficherVideoAbsente() {
+  videoAnnonce.hidden = true;
+  videoAbsente.classList.remove("cache");
+}
+
+videoAnnonce.addEventListener("error", afficherVideoAbsente);
+
 function fermerPhoto() {
+  videoAnnonce.pause();
   modalePhoto.classList.add("cache");
   ecranSelection.classList.remove("cache");
 }

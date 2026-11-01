@@ -10,4 +10,11 @@ Projet A-BB :
  - A la fin du jeu (quand on passe le dernier drapeau) il faut mettre une poussette dans laquelle on ne voit pas le bébé.
  - Une fois arrivé à la poussette il faut afficher un message : "Alors fille ou garçon ?" avec un bouton pour choisir. Une fois le bouton cliqué ça enregistre la réponse du joueur (lié à son nom prénom) et ça ouvre une photo (pour l'instant généré un fichier image temporaire que je remplacerait plus tard).
  
+---------------------------------------------- 
+ 
+ TODO :
+ - A la fin ne pas demander poids / taille / date de naissance
+ - Changer nom du jeu 
+ - Changer photo à la fin par une vidéo
+ 
  
