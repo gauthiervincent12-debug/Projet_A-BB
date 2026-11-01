@@ -1,5 +1,7 @@
 Projet A-BB :
 
+DONE
+
  - Une application à déployer sur un serveur web
  - Un mini jeu en mode arcade 2D (type premier Mario)
  - A heberger sur ????
@@ -10,11 +12,31 @@ Projet A-BB :
  - A la fin du jeu (quand on passe le dernier drapeau) il faut mettre une poussette dans laquelle on ne voit pas le bébé.
  - Une fois arrivé à la poussette il faut afficher un message : "Alors fille ou garçon ?" avec un bouton pour choisir. Une fois le bouton cliqué ça enregistre la réponse du joueur (lié à son nom prénom) et ça ouvre une photo (pour l'instant généré un fichier image temporaire que je remplacerait plus tard).
  
----------------------------------------------- 
- 
- TODO :
  - A la fin ne pas demander poids / taille / date de naissance
- - Changer nom du jeu 
  - Changer photo à la fin par une vidéo
+ - Voir pour mettre musique en fonction du niveau.
+		Reprendre chanson en mode vieux jeu vidéo 8 bits.
+		En mode facile reprendre "Jimmy" de Moriarty
+		En mode moyen reprendre "Rose tatoo" de Dropkick Murphys
+		En mode difficiel reprendre "Killing in the name" de Rage against the machine
+	
+	
+ - En mode facile, enlever un animal et mettre deux fois moins de trous
+  - Changer phrase "Développé par Céline et Vincent avec leur pote Claude Code 😉" par "Développé par Céline et Vincent avec leur pote l'IA Claude Code 😉"
+  - Sur la fin de la partie coline pouvoir récupérer un biberon (en l'air, pas facile à prendre). Une fois le biberon pris on peut tirer du lait pour élminier les animaux.
+   - Ajouter dans la montagne un passage sous la montagne (on voit juste une entrée de grotte mais pas la suite). On peut rentrer dedans si on avance et là ce qui est dessous devient visible. C'est juste une petite pièce avec un Reblochon dedans. Si on passe sur le reblochon le personnage grandit (de 40% environ).
+
  
+	----------------------------------------------
+
+ TODO :	
+  - Changer nom du jeu ? Pablito o Rosita ?
+  
+  
+  -Définir règle du jeu : quoi à gagner et pour qui ?
+	 - Pour chaque niveau (Facile, Moyen ou Difficile) il y aura un cadeau pour :
+	 	* Celui/celle qui aura trouvé le sexe du premier coup et avec le meilleur temps (donc seul le premier essai compte ici)
+		* Celui/celle qui aura marqué le plus de point et avec le meilleur chrono.
+
+  
  
