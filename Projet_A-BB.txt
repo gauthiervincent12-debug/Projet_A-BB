@@ -1,0 +1,13 @@
+Projet A-BB :
+
+ - Une application à déployer sur un serveur web
+ - Un mini jeu en mode arcade 2D (type premier Mario)
+ - A heberger sur ????
+ - Un mini jeu en mode arcade 2D (type premier Mario), pouvoir choisir un personnage au départ (homme ou femme). Il faut se déplacer de gauche à droite pour avancer dans un monde.
+ Le monde en fond contient des coline vertes au départ, puis un lac et ensuite des montagnes qu'il faut gravir.
+ 
+ - Pouvoir rentrer un nom et prénom avant de commencer. Enregistrer le score et le temps avec le nom et le prénon sur le site.
+ - A la fin du jeu (quand on passe le dernier drapeau) il faut mettre une poussette dans laquelle on ne voit pas le bébé.
+ - Une fois arrivé à la poussette il faut afficher un message : "Alors fille ou garçon ?" avec un bouton pour choisir. Une fois le bouton cliqué ça enregistre la réponse du joueur (lié à son nom prénom) et ça ouvre une photo (pour l'instant généré un fichier image temporaire que je remplacerait plus tard).
+ 
+ 
