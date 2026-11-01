@@ -192,14 +192,23 @@ function creerNiveau(difficulte) {
     plateformes.push(colonne(x, y, largeur, "roche"));
   });
 
-  // Ennemis : [x, sol, limite gauche, limite droite]
-  const positions = [
-    [650, SOL, 300, 950],
-    [4050, SOL, 3900, 4290],
-  ];
-  if (!facile) {
-    positions.push([1450, SOL, 1150, 1650], [2150, SOL, 1850, 2350], [4830, 190, 4800, 4950], [5900, -150, 5800, 6060]);
-  }
+  // Ennemis : [x, sol, limite gauche, limite droite, espèce (au hasard selon la zone si absente)]
+  // Facile : toujours les mêmes, dans l'ordre : lièvre, renard, chamois, puis bouquetin tout en haut
+  const positions = facile
+    ? [
+        [650, SOL, 300, 950, "lievre"],
+        [1450, SOL, 1150, 1650, "renard"],
+        [4050, SOL, 3900, 4290, "chamois"],
+        [5900, -150, 5800, 6060, "bouquetin"],
+      ]
+    : [
+        [650, SOL, 300, 950],
+        [4050, SOL, 3900, 4290],
+        [1450, SOL, 1150, 1650],
+        [2150, SOL, 1850, 2350],
+        [4830, 190, 4800, 4950],
+        [5900, -150, 5800, 6060],
+      ];
   if (difficile) {
     positions.push(
       [850, SOL, 300, 950],
@@ -211,7 +220,7 @@ function creerNiveau(difficulte) {
     );
   }
   const vitesse = DIFFICULTES[difficulte].vitesseEnnemis;
-  const ennemis = positions.map(([x, sol, min, max]) => ennemi(x, sol, min, max, vitesse));
+  const ennemis = positions.map(([x, sol, min, max, espece]) => ennemi(x, sol, min, max, vitesse, espece));
 
   // Castor sur le dernier ponton du lac : il suit le ponton s'il bouge
   const ponton = plateformes

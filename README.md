@@ -19,7 +19,7 @@ Ouvrir `index.html` dans un navigateur. Aucune installation n'est nécessaire.
 
 1. Entrer son prénom et son nom.
 2. Choisir la difficulté :
-   - **Facile** : sol continu (pas de ravins), 4 grands pontons fixes, 2 animaux et le castor ;
+   - **Facile** : sol continu (pas de ravins), 4 grands pontons fixes, toujours les mêmes animaux : un lièvre, un renard, le castor, un chamois puis un bouquetin ;
    - **Moyen** : le niveau de base, 6 ennemis, 2 pontons mobiles ;
    - **Difficile** : 12 ennemis plus rapides, 6 pontons mobiles.
 3. Choisir un personnage (homme ou femme). On commence avec 4 vies, affichées en cœurs en haut à gauche.
@@ -63,6 +63,6 @@ Les navigateurs gardent les fichiers en cache. Après une modification de `style
 
 ## Musique
 
-Chaque difficulté a sa musique originale, synthétisée dans le navigateur (aucun fichier audio) : [musique.js](musique.js), version « 32 bits » (cordes pincées simulées, chorus, réverbération).
+Chaque difficulté a sa musique originale, synthétisée dans le navigateur (aucun fichier audio) : [musique.js](musique.js), version 8 bits (« Au fil de l'eau », « Roule ma poule », « Coup de colère »).
 
-L'ancienne version « 16 bits » est gardée dans [musique-16bits.js](musique-16bits.js). Pour y revenir, remplacer `musique.js` par `musique-16bits.js` dans la balise `<script>` de `index.html`.
+Autres versions gardées (non chargées par le site) : [musique-64bits.js](musique-64bits.js) et [musique-32bits.js](musique-32bits.js) (« Brume », « Vertige », « Abîme »), [musique-16bits.js](musique-16bits.js). Pour en réutiliser une, remplacer `musique.js` par son nom dans la balise `<script>` de `index.html`.

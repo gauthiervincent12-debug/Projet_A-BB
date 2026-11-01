@@ -521,13 +521,20 @@ button:hover {
   #jeu.plein-ecran .controles-tactiles button {
     height: 4.5rem;
   }
+
+  /* ◀ ▶ plus larges que le tir et le saut */
+  #jeu:fullscreen .groupe-deplacement,
+  #jeu.plein-ecran .groupe-deplacement {
+    flex: 1.6;
+  }
 }
 
 @media (hover: none) and (pointer: coarse) and (orientation: landscape) {
   /* Paysage : le jeu prend toute la hauteur, déplacement à gauche, tir et saut à droite */
   #jeu:fullscreen,
   #jeu.plein-ecran {
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    /* Bande de gauche plus large : les boutons ◀ ▶ y sont côte à côte */
+    grid-template-columns: minmax(8rem, 1.6fr) auto minmax(5rem, 1fr);
     grid-template-rows: auto 1fr;
     grid-template-areas:
       "hud hud hud"
@@ -536,8 +543,8 @@ button:hover {
 
   #jeu:fullscreen .zone-jeu,
   #jeu.plein-ecran .zone-jeu {
-    /* Au moins 5 rem de chaque côté pour les boutons */
-    width: min(100vw - 10.6rem, (100dvh - 2.6rem) * 16 / 9);
+    /* Au moins 8 rem à gauche et 5 rem à droite pour les boutons */
+    width: min(100vw - 13.6rem, (100dvh - 2.6rem) * 16 / 9);
   }
 
   #jeu:fullscreen .controles-tactiles,
