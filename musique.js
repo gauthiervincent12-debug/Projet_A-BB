@@ -1,6 +1,6 @@
 // Musiques 8 bits originales, une par difficulté, synthétisées avec la Web Audio API.
-// Sauvegardes des autres versions (non chargées par le site) : musique-16bits.js,
-// musique-32bits.js et musique-64bits.js.
+// Sauvegardes des autres versions (non chargées par le site) : musique-8bits-au-fil-de-l-eau.js,
+// musique-16bits.js, musique-32bits.js et musique-64bits.js.
 //
 // Chaque voix est une suite de mesures de 16 pas (doubles croches) :
 //   "A4" = note jouée sur ce pas · "-" = la note précédente continue · "." = silence
@@ -9,42 +9,51 @@
 
 const Musique = (() => {
   const SILENCE = ". . . . . . . . . . . . . . . .";
-  const arpege = (a, b, c, d) => `${a} - ${b} - ${c} - ${d} - ${c} - ${b} - ${a} - ${b} -`;
-  const tenue = (note) => `${note} - - - - - - - - - - - - - - -`;
 
   const MORCEAUX = {
-    // Facile : « Au fil de l'eau », calme et mélancolique
+    // Facile : « Route du désert », rock du désert au riff entêtant (sol mineur)
     facile: {
-      bpm: 76,
+      bpm: 120,
       voix: [
         {
-          type: "triangle",
-          volume: 0.32,
+          // Riff de guitare grave
+          type: "sawtooth",
+          volume: 0.08,
           mesures: [
-            arpege("A3", "C4", "E4", "A4"), arpege("F3", "A3", "C4", "F4"),
-            arpege("C4", "E4", "G4", "C5"), arpege("G3", "B3", "D4", "G4"),
-            arpege("A3", "C4", "E4", "A4"), arpege("F3", "A3", "C4", "F4"),
-            arpege("D4", "F4", "A4", "D5"), arpege("E3", "G#3", "B3", "E4"),
+            "G2 - G2 . Bb2 - . G2 C3 - Bb2 . G2 - . .",
+            "G2 - G2 . Bb2 - . G2 D3 - C3 . Bb2 - G2 -",
+            "G2 - G2 . Bb2 - . G2 C3 - Bb2 . G2 - . .",
+            "G2 - G2 . Bb2 - . G2 D3 - C3 . Bb2 - G2 -",
+            "C3 - C3 . Eb3 - . C3 F3 - Eb3 . C3 - . .",
+            "C3 - C3 . Eb3 - . C3 F3 - Eb3 . C3 - . .",
+            "G2 - G2 . Bb2 - . G2 C3 - Bb2 . G2 - . .",
+            "D3 - . D3 . D3 C3 - Bb2 - A2 - G2 - - -",
           ],
         },
         {
-          type: "triangle",
-          volume: 0.34,
-          mesures: ["A2", "F2", "C3", "G2", "A2", "F2", "D3", "E2"].map(tenue),
+          type: "batterie",
+          volume: 0.9,
+          mesures: [
+            "k . h . s . h k . k h . s . h .",
+            "k . h . s . h k . k h . s . h .",
+            "k . h . s . h k . k h . s . h .",
+            "k . h . s . h k . k s . s s s s",
+          ],
         },
         {
+          // La mélodie arrive au deuxième passage du riff
           type: "square",
-          volume: 0.09,
+          volume: 0.06,
           mesures: [
             SILENCE, SILENCE, SILENCE, SILENCE, SILENCE, SILENCE, SILENCE, SILENCE,
-            "E5 - - - D5 - C5 - B4 - - - C5 - - -",
-            "A4 - - - - - - - C5 - - - A4 - - -",
-            "G4 - - - C5 - - - E5 - - - D5 - C5 -",
-            "D5 - - - - - - - . . . . B4 - - -",
-            "E5 - - - A5 - - - G5 - E5 - D5 - - -",
-            "C5 - - - - - A4 - C5 - - - F5 - - -",
-            "E5 - D5 - C5 - - - D5 - - - A4 - - -",
-            "B4 - - - - - - - G#4 - - - - - - -",
+            "D4 - - - F4 - G4 - - - F4 - D4 - - -",
+            "Bb3 - - - C4 - D4 - - - . . . . . .",
+            "D4 - - - F4 - G4 - Bb4 - - - G4 - F4 -",
+            "G4 - - - - - - - . . . . . . . .",
+            "G4 - - - Bb4 - C5 - - - Bb4 - G4 - - -",
+            "G4 - - - Bb4 - C5 - - - D5 - C5 - - -",
+            "D4 - - - F4 - G4 - - - F4 - D4 - - -",
+            "D4 - . D4 . D4 C4 - Bb3 - A3 - G3 - - -",
           ],
         },
       ],

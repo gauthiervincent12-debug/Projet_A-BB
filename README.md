@@ -74,6 +74,6 @@ Les navigateurs gardent les fichiers en cache. Après une modification de `style
 
 ## Musique
 
-Chaque difficulté a sa musique originale, synthétisée dans le navigateur (aucun fichier audio) : [musique.js](musique.js), version 8 bits (« Au fil de l'eau », « Roule ma poule », « Coup de colère »).
+Chaque difficulté a sa musique originale, synthétisée dans le navigateur (aucun fichier audio) : [musique.js](musique.js), version 8 bits (« Route du désert », « Roule ma poule », « Coup de colère »).
 
-Autres versions gardées (non chargées par le site) : [musique-64bits.js](musique-64bits.js) et [musique-32bits.js](musique-32bits.js) (« Brume », « Vertige », « Abîme »), [musique-16bits.js](musique-16bits.js). Pour en réutiliser une, remplacer `musique.js` par son nom dans la balise `<script>` de `index.html`.
+Autres versions gardées (non chargées par le site) : [musique-8bits-au-fil-de-l-eau.js](musique-8bits-au-fil-de-l-eau.js) (même version 8 bits, avec « Au fil de l'eau » en Facile), [musique-64bits.js](musique-64bits.js) et [musique-32bits.js](musique-32bits.js) (« Brume », « Vertige », « Abîme »), [musique-16bits.js](musique-16bits.js). Pour en réutiliser une, remplacer `musique.js` par son nom dans la balise `<script>` de `index.html`.
