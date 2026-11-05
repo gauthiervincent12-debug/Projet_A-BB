@@ -34,6 +34,7 @@ DONE
   
   
   -Définir règle du jeu : quoi à gagner et pour qui ?
+	Ecrire les règles du jeu avec le début d'une partie : 
 	 - Pour chaque niveau (Facile, Moyen ou Difficile) il y aura un cadeau pour :
 	 	* Celui/celle qui aura trouvé le sexe du premier coup et avec le meilleur temps (donc seul le premier essai compte ici)
 		* Celui/celle qui aura marqué le plus de point et avec le meilleur chrono.
