@@ -264,6 +264,7 @@ const Musique = (() => {
   function arreter() {
     clearInterval(minuteur);
     minuteur = null;
+    couperRiff();
   }
 
   // À appeler depuis un clic (les navigateurs exigent un geste pour lancer le son)
@@ -279,52 +280,220 @@ const Musique = (() => {
     minuteur = setInterval(programmer, 25);
   }
 
-  // Riff de guitare saturée joué quand le personnage fait le signe du metal : [note, départ, durée] en secondes.
-  // Chaque note est un accord de puissance (fondamentale + quinte), passé dans une distorsion.
-  const RIFF = [
-    ["E2", 0, 0.16], ["E2", 0.2, 0.08], ["G2", 0.3, 0.16], ["E2", 0.5, 0.08],
-    ["A2", 0.6, 0.28], ["G2", 0.92, 0.12], ["B2", 1.08, 0.5],
-  ];
+  // Riff original dans l'esprit nu-metal, au son « 64 bits », joué quand le personnage fait le signe du metal :
+  // une mesure de groupe complet (guitares, basse, batterie) puis un accord final sur la cymbale.
+  // Même écriture que les morceaux : 16 pas par mesure, « - » = la note continue, « . » = silence.
+  const PAS_RIFF = 0.13; // environ 115 BPM
+  const GUITARE_RIFF = preparerVoix({
+    mesures: ["A1 - . A1 . . Bb1 . A1 - . C2 - B1 - .", "A1 - - - . . . . . . . . . . . ."],
+  });
+  const BATTERIE_RIFF = preparerVoix({
+    mesures: ["c . h k s . h . k k h . s . h s", "c . . . . . . . . . . . . . . ."],
+  });
+  const HARMONIQUES_RIFF = [1, 1.5];
   let courbeRiff = null;
+  let ambianceRiff = null;
+  let busRiff = null;
+  const cordesRiff = new Map();
 
-  function riff() {
-    if (!active || !initialiser()) return;
-    audio.resume();
+  // Corde pincée simulée (Karplus-Strong), calculée une seule fois par note : son « 64 bits »
+  function cordeRiff(f) {
+    const cle = f.toFixed(2);
+    if (cordesRiff.has(cle)) return cordesRiff.get(cle);
+    const sr = audio.sampleRate;
+    const n = Math.max(2, Math.floor(sr / f - 0.5));
+    const ligne = new Float32Array(n);
+    let lisse = 0;
+    for (let i = 0; i < n; i++) {
+      // Attaque assez douce : moins de brillance, donc un son moins métallique
+      lisse += 0.6 * (Math.random() * 2 - 1 - lisse);
+      ligne[i] = lisse;
+    }
+    const total = Math.floor(sr * 1.2);
+    const tampon = audio.createBuffer(1, total, sr);
+    const d = tampon.getChannelData(0);
+    let crete = 0;
+    for (let i = 0, k = 0; i < total; i++) {
+      const suivant = k + 1 === n ? 0 : k + 1;
+      d[i] = ligne[k];
+      crete = Math.max(crete, Math.abs(d[i]));
+      ligne[k] = 0.998 * 0.5 * (ligne[k] + ligne[suivant]);
+      k = suivant;
+    }
+    for (let i = 0; i < total; i++) d[i] /= crete || 1;
+    const corde = { tampon, frequenceReelle: sr / (n + 0.5) };
+    cordesRiff.set(cle, corde);
+    return corde;
+  }
+
+  // Calcul à l'avance des cordes et de l'ambiance, pour que le riff parte sans à-coup dans le jeu
+  function prechargerRiff() {
+    for (const { note } of GUITARE_RIFF.departs.values()) {
+      for (const h of HARMONIQUES_RIFF) cordeRiff(frequence(note) * h);
+    }
     if (!courbeRiff) {
-      courbeRiff = new Float32Array(1024);
+      courbeRiff = new Float32Array(2048);
       for (let i = 0; i < courbeRiff.length; i++) {
         const x = (i / (courbeRiff.length - 1)) * 2 - 1;
-        courbeRiff[i] = (41 * x) / (1 + 40 * Math.abs(x));
+        courbeRiff[i] = (21 * x) / (1 + 20 * Math.abs(x));
       }
     }
-    const disto = audio.createWaveShaper();
-    disto.curve = courbeRiff;
-    const passeBas = audio.createBiquadFilter();
-    passeBas.type = "lowpass";
-    passeBas.frequency.value = 3000;
-    const volume = audio.createGain();
-    volume.gain.value = 0.45;
-    disto.connect(passeBas).connect(volume).connect(sortie);
-    const t0 = audio.currentTime + 0.02;
-    for (const [note, debut, duree] of RIFF) {
-      for (const f of [frequence(note), frequence(note) * 1.5]) {
-        const osc = audio.createOscillator();
-        const gain = audio.createGain();
-        osc.type = "sawtooth";
-        osc.frequency.value = f;
-        gain.gain.setValueAtTime(0, t0 + debut);
-        gain.gain.linearRampToValueAtTime(0.3, t0 + debut + 0.005);
-        gain.gain.setTargetAtTime(0, t0 + debut + duree, 0.03);
-        osc.connect(gain).connect(disto);
-        osc.start(t0 + debut);
-        osc.stop(t0 + debut + duree + 0.2);
+    if (!ambianceRiff) {
+      // Petite pièce : réverbération stéréo de 0,6 s
+      const longueur = Math.floor(audio.sampleRate * 0.6);
+      ambianceRiff = audio.createBuffer(2, longueur, audio.sampleRate);
+      for (let canal = 0; canal < 2; canal++) {
+        const d = ambianceRiff.getChannelData(canal);
+        for (let i = 0; i < longueur; i++) d[i] = (Math.random() * 2 - 1) * Math.exp((-i / audio.sampleRate) * 9);
       }
     }
   }
 
-  // Rien à précalculer en 8 bits : on crée seulement le contexte audio à l'avance
+  function filtreRiff(type, frequenceFiltre, q, gain = 0) {
+    const f = audio.createBiquadFilter();
+    f.type = type;
+    f.frequency.value = frequenceFiltre;
+    f.Q.value = q;
+    f.gain.value = gain;
+    return f;
+  }
+
+  // Une guitare : saturation modérée, son chaud (aigus adoucis, médiums peu creusés), placée en stéréo
+  function creerGuitareRiff(pan, dest) {
+    const entree = audio.createGain();
+    entree.gain.value = 2;
+    const disto = audio.createWaveShaper();
+    disto.curve = courbeRiff;
+    disto.oversample = "2x";
+    let suite = dest;
+    if (audio.createStereoPanner) {
+      suite = audio.createStereoPanner();
+      suite.pan.value = pan;
+      suite.connect(dest);
+    }
+    entree
+      .connect(disto)
+      .connect(filtreRiff("peaking", 800, 0.8, -3))
+      .connect(filtreRiff("lowpass", 2800, 0.7))
+      .connect(suite);
+    return entree;
+  }
+
+  // Coup de bruit filtré, pour la caisse claire et les cymbales
+  function bruitRiff(t, duree, niveau, filtres, dest) {
+    const source = audio.createBufferSource();
+    const gain = audio.createGain();
+    source.buffer = bruit;
+    source.loop = true;
+    gain.gain.setValueAtTime(niveau, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + duree);
+    let suite = source;
+    for (const f of filtres) suite = suite.connect(f);
+    suite.connect(gain).connect(dest);
+    source.start(t, Math.random() * 0.5);
+    source.stop(t + duree + 0.01);
+  }
+
+  function ton(type, frequenceDebut, frequenceFin, t, duree, niveau, dest) {
+    const osc = audio.createOscillator();
+    const gain = audio.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(frequenceDebut, t);
+    osc.frequency.exponentialRampToValueAtTime(frequenceFin, t + duree * 0.4);
+    gain.gain.setValueAtTime(niveau, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + duree);
+    osc.connect(gain).connect(dest);
+    osc.start(t);
+    osc.stop(t + duree + 0.01);
+  }
+
+  function coupRiff(coup, t, dest) {
+    if (coup === "k" || coup === "c") ton("sine", 120, 45, t, 0.28, 0.85, dest);
+    if (coup === "s") {
+      ton("triangle", 200, 170, t, 0.1, 0.3, dest);
+      bruitRiff(t, 0.17, 0.32, [filtreRiff("bandpass", 1800, 0.7)], dest);
+    } else if (coup === "h") {
+      bruitRiff(t, 0.04, 0.06, [filtreRiff("highpass", 6000, 0.7)], dest);
+    } else if (coup === "c") {
+      bruitRiff(t, 0.9, 0.1, [filtreRiff("highpass", 3500, 0.7), filtreRiff("lowpass", 8000, 0.7)], dest);
+    }
+  }
+
+  // Un nouveau riff, ou la fin de la musique, coupe en douceur le riff en cours
+  function couperRiff() {
+    if (busRiff) busRiff.gain.setTargetAtTime(0, audio.currentTime, 0.02);
+    busRiff = null;
+  }
+
+  function riff() {
+    if (!active || !initialiser()) return;
+    audio.resume();
+    prechargerRiff();
+    couperRiff();
+    const t0 = audio.currentTime + 0.02;
+
+    // Sortie du groupe : compresseur, volume, et un peu d'ambiance de pièce
+    busRiff = audio.createGain();
+    const compresseur = audio.createDynamicsCompressor();
+    compresseur.threshold.value = -20;
+    compresseur.ratio.value = 3;
+    const volume = audio.createGain();
+    volume.gain.value = 0.42;
+    busRiff.connect(compresseur).connect(volume).connect(sortie);
+    const piece = audio.createConvolver();
+    piece.buffer = ambianceRiff;
+    const dosePiece = audio.createGain();
+    dosePiece.gain.value = 0.1;
+    compresseur.connect(piece).connect(dosePiece).connect(sortie);
+
+    // Deux guitares séparées, à gauche et à droite, jouées à quelques millisecondes d'écart
+    const guitares = [
+      { entree: creerGuitareRiff(-0.6, busRiff), desaccord: -5, retard: 0 },
+      { entree: creerGuitareRiff(0.6, busRiff), desaccord: 5, retard: 0.006 },
+    ];
+    const basse = filtreRiff("lowpass", 450, 0.8);
+    basse.connect(busRiff);
+
+    for (const [pas, { note, duree }] of GUITARE_RIFF.departs) {
+      const f = frequence(note);
+      const debut = t0 + pas * PAS_RIFF;
+      const longueur = duree * PAS_RIFF;
+      for (const { entree, desaccord, retard } of guitares) {
+        const t = debut + retard;
+        const gain = audio.createGain();
+        gain.gain.setValueAtTime(0, t);
+        gain.gain.linearRampToValueAtTime(0.3, t + 0.003);
+        gain.gain.setTargetAtTime(0, t + longueur, 0.015);
+        gain.connect(entree);
+        for (const h of HARMONIQUES_RIFF) {
+          const { tampon, frequenceReelle } = cordeRiff(f * h);
+          const source = audio.createBufferSource();
+          source.buffer = tampon;
+          source.playbackRate.value = ((f * h) / frequenceReelle) * 2 ** (desaccord / 1200);
+          source.connect(gain);
+          source.start(t);
+          source.stop(t + longueur + 0.12);
+        }
+      }
+      // La basse double les guitares
+      const osc = audio.createOscillator();
+      const gainBasse = audio.createGain();
+      osc.type = "sawtooth";
+      osc.frequency.value = f;
+      gainBasse.gain.setValueAtTime(0, debut);
+      gainBasse.gain.linearRampToValueAtTime(0.4, debut + 0.005);
+      gainBasse.gain.setTargetAtTime(0, debut + longueur, 0.02);
+      osc.connect(gainBasse).connect(basse);
+      osc.start(debut);
+      osc.stop(debut + longueur + 0.15);
+    }
+
+    for (const [pas, { note }] of BATTERIE_RIFF.departs) coupRiff(note, t0 + pas * PAS_RIFF, busRiff);
+  }
+
+  // Contexte audio et cordes du riff créés à l'avance (la musique 8 bits n'a rien à précalculer)
   function preparer() {
-    if (active) initialiser();
+    if (active && initialiser()) prechargerRiff();
   }
 
   // Pause : fige le son sans perdre la position dans le morceau
